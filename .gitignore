@@ -1,0 +1,70 @@
+# OS and editors
+.DS_Store
+Thumbs.db
+.codex
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Environment and local secrets
+.env
+.env.*
+!.env.example
+!.env.local.example
+!.env.test.example
+
+# Logs and temp files
+*.log
+*.pid
+*.seed
+*.tmp
+*.temp
+.cache/
+.tmp/
+tmp/
+
+# Python / FastAPI
+__pycache__/
+*.py[cod]
+*.pyd
+*.pyo
+.python-version
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.hypothesis/
+.coverage
+.coverage.*
+htmlcov/
+dist/
+build/
+site/
+.eggs/
+*.egg
+*.egg-info/
+pip-wheel-metadata/
+.venv/
+venv/
+ENV/
+env/
+
+# Node / Next.js
+node_modules/
+.npm/
+.pnpm-store/
+.yarn/
+.turbo/
+.next/
+out/
+coverage/
+*.tsbuildinfo
+
+# Database and local runtime artifacts
+*.sqlite3
+*.db
+postgres-data/
+pgdata/
+
+# Docker overrides
+docker-compose.override.yml
