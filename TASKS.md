@@ -3,22 +3,23 @@
 This file tracks the current actionable tasks for the Loan Manager project.
 
 ## Current Focus
-Build the first backend vertical slice: borrower management.
+Move from borrower management into loan creation and repayment schedule generation.
 
 ## Immediate Tasks
-- [x] Review current backend structure after migration setup
-- [x] Confirm `backend/app/db/session.py` exists and is correctly configured
-- [x] Create Pydantic borrower schemas
-- [x] Create borrower service layer
-- [x] Create borrower API routes
-- [x] Wire borrower routes into the FastAPI app
-- [x] Test borrower CRUD end to end
+- [x] Create loan Pydantic schemas
+- [x] Create loan service layer
+- [x] Implement create loan endpoint
+- [ ] Implement repayment schedule generation service
+- [ ] Support weekly schedules
+- [ ] Support monthly schedules
+- [ ] Store generated repayment schedule items
+- [ ] Test schedule totals and installment correctness
 
 ## Near-Term Tasks
-- [ ] Create loan Pydantic schemas
-- [ ] Create loan service layer
-- [ ] Implement create loan endpoint
-- [ ] Implement repayment schedule generation service
+- [ ] Create payment Pydantic schemas
+- [ ] Create payment service layer
+- [ ] Implement payment recording endpoint
+- [ ] Implement payment allocation logic
 
 ## Project Hygiene
 - [x] Commit current database milestone
@@ -31,4 +32,5 @@ Build the first backend vertical slice: borrower management.
 - The initial Alembic migration has been applied successfully.
 - The database tables now exist.
 - The borrower vertical slice is now working end to end.
-- The next major goal is loan creation and repayment schedule generation.
+- Phase 3 loan creation and validation is now implemented and wired into the app.
+- The next major goal is Phase 4 repayment schedule generation.

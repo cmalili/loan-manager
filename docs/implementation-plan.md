@@ -1,14 +1,14 @@
 # Loan Manager Implementation Plan
-- [ ] Test borrower CRUD flow end to end
+- [x] Test borrower CRUD flow end to end
 
 ## Phase 3 — Loan Creation and Validation
-- [ ] Create Pydantic schemas for loans
-- [ ] Create loan service layer
-- [ ] Implement create loan
-- [ ] Enforce one active loan per borrower
-- [ ] Enforce loan status rules
-- [ ] Validate repayment frequency and interest rate rules
-- [ ] Test loan creation and validation rules
+- [x] Create Pydantic schemas for loans
+- [x] Create loan service layer
+- [x] Implement create loan
+- [x] Enforce one active loan per borrower
+- [x] Enforce loan status rules
+- [x] Validate repayment frequency and interest rate rules
+- [x] Test loan creation and validation rules
 
 ## Phase 4 — Repayment Schedule Generation
 - [ ] Create repayment schedule service
