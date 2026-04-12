@@ -3,17 +3,17 @@
 This file tracks the current actionable tasks for the Loan Manager project.
 
 ## Current Focus
-Move from borrower management into loan creation and repayment schedule generation.
+Move from loan creation into payment recording and allocation.
 
 ## Immediate Tasks
 - [x] Create loan Pydantic schemas
 - [x] Create loan service layer
 - [x] Implement create loan endpoint
-- [ ] Implement repayment schedule generation service
-- [ ] Support weekly schedules
-- [ ] Support monthly schedules
-- [ ] Store generated repayment schedule items
-- [ ] Test schedule totals and installment correctness
+- [x] Implement repayment schedule generation service
+- [x] Support weekly schedules
+- [x] Support monthly schedules
+- [x] Store generated repayment schedule items
+- [x] Test schedule totals and installment correctness
 
 ## Near-Term Tasks
 - [ ] Create payment Pydantic schemas
@@ -33,4 +33,5 @@ Move from borrower management into loan creation and repayment schedule generati
 - The database tables now exist.
 - The borrower vertical slice is now working end to end.
 - Phase 3 loan creation and validation is now implemented and wired into the app.
-- The next major goal is Phase 4 repayment schedule generation.
+- Phase 4 repayment schedule generation is now implemented and tested.
+- The next major goal is Phase 5 payment recording and allocation.

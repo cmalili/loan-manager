@@ -11,13 +11,13 @@
 - [x] Test loan creation and validation rules
 
 ## Phase 4 — Repayment Schedule Generation
-- [ ] Create repayment schedule service
-- [ ] Support weekly schedules
-- [ ] Support monthly schedules
-- [ ] Apply 8% weekly rate correctly
-- [ ] Apply 30% monthly rate correctly
-- [ ] Store generated repayment schedule items
-- [ ] Test schedule totals and installment correctness
+- [x] Create repayment schedule service
+- [x] Support weekly schedules
+- [x] Support monthly schedules
+- [x] Apply 8% weekly rate correctly
+- [x] Apply 30% monthly rate correctly
+- [x] Store generated repayment schedule items
+- [x] Test schedule totals and installment correctness
 
 ## Phase 5 — Payment Recording and Allocation
 - [ ] Create Pydantic schemas for payments

@@ -15,6 +15,10 @@ from app.services.loan import (
     LoanValidationError,
     create_loan,
 )
+from app.services.repayment_schedule import (
+    build_repayment_schedule,
+    build_schedule_items,
+)
 
 __all__ = [
     "ActiveLoanConflictError",
@@ -22,6 +26,8 @@ __all__ = [
     "LoanBorrowerNotFoundError",
     "LoanCreatorNotFoundError",
     "LoanValidationError",
+    "build_repayment_schedule",
+    "build_schedule_items",
     "create_borrower",
     "create_loan",
     "deactivate_borrower",

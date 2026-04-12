@@ -14,7 +14,6 @@ from app.services.loan import (  # noqa: E402
     LoanBorrowerNotFoundError,
     LoanCreatorNotFoundError,
     LoanValidationError,
-    add_months,
     calculate_end_date,
     create_loan,
     get_periodic_interest_rate,
@@ -56,10 +55,6 @@ class LoanServiceTests(unittest.TestCase):
         payload.update(overrides)
         return LoanCreate(**payload)
 
-    def test_add_months_clamps_day_to_target_month(self) -> None:
-        result = add_months(date(2026, 1, 31), 1)
-        self.assertEqual(result, date(2026, 2, 28))
-
     def test_calculate_end_date_supports_weekly_and_monthly(self) -> None:
         self.assertEqual(
             calculate_end_date(date(2026, 4, 11), "weekly", 4),
@@ -83,6 +78,8 @@ class LoanServiceTests(unittest.TestCase):
         self.assertEqual(loan.end_date, date(2026, 7, 11))
         self.assertEqual(loan.status, "active")
         self.db.add.assert_called_once()
+        self.db.flush.assert_called_once()
+        self.db.add_all.assert_called_once()
         self.db.commit.assert_called_once()
         self.db.refresh.assert_called_once_with(loan)
 

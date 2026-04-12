@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-import calendar
-from datetime import date, timedelta
+from datetime import date
 from decimal import Decimal
 
 from sqlalchemy import select
@@ -13,6 +12,7 @@ from app.models.borrower import Borrower
 from app.models.loan import Loan
 from app.models.user import User
 from app.schemas.loan import LoanCreate
+from app.services.repayment_schedule import add_months, build_schedule_items
 
 
 WEEKLY_RATE = Decimal("8.00")
@@ -37,20 +37,12 @@ class ActiveLoanConflictError(ValueError):
     """Raised when the borrower already has an active loan."""
 
 
-def add_months(value: date, months: int) -> date:
-    """Add calendar months while clamping the day to the target month length."""
-
-    month_index = value.month - 1 + months
-    year = value.year + month_index // 12
-    month = month_index % 12 + 1
-    day = min(value.day, calendar.monthrange(year, month)[1])
-    return date(year, month, day)
-
-
 def calculate_end_date(start_date: date, repayment_frequency: str, term_length: int) -> date:
     """Calculate the loan end date from term and repayment frequency."""
 
     if repayment_frequency == "weekly":
+        from datetime import timedelta
+
         return start_date + timedelta(weeks=term_length)
     if repayment_frequency == "monthly":
         return add_months(start_date, term_length)
@@ -122,6 +114,9 @@ def create_loan(db: Session, loan_in: LoanCreate) -> Loan:
     )
 
     db.add(loan)
+    db.flush()
+    schedule_items = build_schedule_items(loan)
+    db.add_all(schedule_items)
     db.commit()
     db.refresh(loan)
     return loan
