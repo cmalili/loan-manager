@@ -1,6 +1,14 @@
 """Business services package."""
 
 from app.services.audit import record_audit_log, snapshot_model
+from app.services.auth import (
+    AuthenticationError,
+    InactiveUserError,
+    authenticate_user,
+    get_user_by_email,
+    get_user_by_id,
+    issue_access_token_for_user,
+)
 from app.services.borrower import (
     BorrowerNotFoundError,
     create_borrower,
@@ -17,6 +25,7 @@ from app.services.loan import (
     create_loan,
 )
 from app.services.payment import (
+    BackdatedPaymentNotAllowedError,
     PaymentBorrowerNotFoundError,
     PaymentLoanNotFoundError,
     PaymentRecorderNotFoundError,
@@ -41,7 +50,10 @@ from app.services.repayment_schedule import (
 
 __all__ = [
     "ActiveLoanConflictError",
+    "AuthenticationError",
+    "BackdatedPaymentNotAllowedError",
     "BorrowerNotFoundError",
+    "InactiveUserError",
     "LoanBorrowerNotFoundError",
     "LoanCreatorNotFoundError",
     "LoanValidationError",
@@ -56,7 +68,10 @@ __all__ = [
     "create_loan",
     "deactivate_borrower",
     "get_borrower",
+    "get_user_by_email",
+    "get_user_by_id",
     "get_dashboard_summary",
+    "issue_access_token_for_user",
     "list_borrowers",
     "list_borrower_loan_history",
     "list_overdue_loans",
@@ -65,6 +80,7 @@ __all__ = [
     "process_overdue_loans",
     "record_audit_log",
     "record_payment",
+    "authenticate_user",
     "snapshot_model",
     "update_borrower",
 ]

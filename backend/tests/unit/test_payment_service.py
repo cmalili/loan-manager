@@ -15,6 +15,7 @@ from app.models.payment_allocation import PaymentAllocation  # noqa: E402
 from app.models.repayment_schedule_item import RepaymentScheduleItem  # noqa: E402
 from app.schemas.payment import PaymentCreate  # noqa: E402
 from app.services.payment import (  # noqa: E402
+    BackdatedPaymentNotAllowedError,
     PaymentValidationError,
     record_payment,
 )
@@ -210,6 +211,18 @@ class PaymentServiceTests(unittest.TestCase):
             record_payment(
                 self.db,
                 self.make_payment(borrower_id=wrong_borrower_id),
+            )
+
+    def test_record_payment_rejects_backdated_payment_for_non_admin_user(self) -> None:
+        self.user.role = "staff"
+
+        with self.assertRaisesRegex(
+            BackdatedPaymentNotAllowedError,
+            "Only admin users may record backdated payments",
+        ):
+            record_payment(
+                self.db,
+                self.make_payment(payment_date=date.today() - timedelta(days=1)),
             )
 
 

@@ -39,6 +39,10 @@ class PaymentRecorderNotFoundError(LookupError):
     """Raised when a payment references a missing user."""
 
 
+class BackdatedPaymentNotAllowedError(ValueError):
+    """Raised when a non-admin user attempts to record a backdated payment."""
+
+
 def _money(value: Decimal) -> Decimal:
     return value.quantize(Decimal("0.01"))
 
@@ -197,6 +201,11 @@ def record_payment(db: Session, payment_in: PaymentCreate) -> Payment:
     recorder = db.get(User, payment_in.recorded_by_user_id)
     if recorder is None:
         raise PaymentRecorderNotFoundError(f"User {payment_in.recorded_by_user_id} was not found")
+
+    if payment_in.payment_date < datetime.now().date() and recorder.role != "admin":
+        raise BackdatedPaymentNotAllowedError(
+            "Only admin users may record backdated payments"
+        )
 
     if loan.borrower_id != payment_in.borrower_id:
         raise PaymentValidationError("Payment borrower must match the loan borrower")

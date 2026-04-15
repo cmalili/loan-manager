@@ -24,6 +24,7 @@ from app.schemas.borrower import BorrowerCreate, BorrowerUpdate  # noqa: E402
 class BorrowerRouteTests(unittest.TestCase):
     def setUp(self) -> None:
         self.fake_db = object()
+        self.current_user = SimpleNamespace(id=uuid4(), role="admin")
         self.borrower_id = uuid4()
         self.borrower_payload = {
             "id": self.borrower_id,
@@ -42,7 +43,7 @@ class BorrowerRouteTests(unittest.TestCase):
             "app.api.routes.borrowers.get_borrower",
             return_value=self.borrower_payload,
         ) as mock_get_borrower:
-            result = get_borrower_endpoint(self.borrower_id, self.fake_db)
+            result = get_borrower_endpoint(self.borrower_id, self.fake_db, self.current_user)
 
         self.assertEqual(result["id"], self.borrower_id)
         mock_get_borrower.assert_called_once_with(self.fake_db, self.borrower_id)
@@ -53,7 +54,7 @@ class BorrowerRouteTests(unittest.TestCase):
             side_effect=BorrowerNotFoundError("Borrower not found"),
         ):
             with self.assertRaises(HTTPException) as exc_info:
-                get_borrower_endpoint(self.borrower_id, self.fake_db)
+                get_borrower_endpoint(self.borrower_id, self.fake_db, self.current_user)
 
         self.assertEqual(exc_info.exception.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(exc_info.exception.detail, "Borrower not found")
@@ -72,7 +73,7 @@ class BorrowerRouteTests(unittest.TestCase):
             "app.api.routes.borrowers.create_borrower",
             return_value=self.borrower_payload,
         ) as mock_create_borrower:
-            result = create_borrower_endpoint(borrower_in, self.fake_db)
+            result = create_borrower_endpoint(borrower_in, self.fake_db, self.current_user)
 
         self.assertEqual(result["full_name"], "Jane Doe")
         mock_create_borrower.assert_called_once_with(self.fake_db, borrower_in)
@@ -101,7 +102,9 @@ class BorrowerRouteTests(unittest.TestCase):
             "app.api.routes.borrowers.list_borrower_loan_history",
             return_value=loan_payload,
         ) as mock_history:
-            result = list_borrower_loans_endpoint(self.borrower_id, self.fake_db)
+            result = list_borrower_loans_endpoint(
+                self.borrower_id, self.fake_db, self.current_user
+            )
 
         self.assertEqual(result, loan_payload)
         mock_history.assert_called_once_with(self.fake_db, self.borrower_id)
@@ -112,7 +115,9 @@ class BorrowerRouteTests(unittest.TestCase):
             side_effect=BorrowerNotFoundError("Borrower not found"),
         ):
             with self.assertRaises(HTTPException) as exc_info:
-                list_borrower_loans_endpoint(self.borrower_id, self.fake_db)
+                list_borrower_loans_endpoint(
+                    self.borrower_id, self.fake_db, self.current_user
+                )
 
         self.assertEqual(exc_info.exception.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(exc_info.exception.detail, "Borrower not found")
@@ -130,7 +135,9 @@ class BorrowerRouteTests(unittest.TestCase):
             "app.api.routes.borrowers.update_borrower",
             return_value=updated_payload,
         ) as mock_update_borrower:
-            result = update_borrower_endpoint(self.borrower_id, borrower_in, self.fake_db)
+            result = update_borrower_endpoint(
+                self.borrower_id, borrower_in, self.fake_db, self.current_user
+            )
 
         self.assertEqual(result["phone_number"], "555-9999")
         mock_update_borrower.assert_called_once_with(
@@ -145,7 +152,9 @@ class BorrowerRouteTests(unittest.TestCase):
             side_effect=BorrowerNotFoundError("Borrower not found"),
         ):
             with self.assertRaises(HTTPException) as exc_info:
-                update_borrower_endpoint(self.borrower_id, borrower_in, self.fake_db)
+                update_borrower_endpoint(
+                    self.borrower_id, borrower_in, self.fake_db, self.current_user
+                )
 
         self.assertEqual(exc_info.exception.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(exc_info.exception.detail, "Borrower not found")
@@ -158,7 +167,9 @@ class BorrowerRouteTests(unittest.TestCase):
             "app.api.routes.borrowers.deactivate_borrower",
             return_value=inactive_payload,
         ) as mock_deactivate_borrower:
-            result = deactivate_borrower_endpoint(self.borrower_id, self.fake_db)
+            result = deactivate_borrower_endpoint(
+                self.borrower_id, self.fake_db, self.current_user
+            )
 
         self.assertEqual(result["status"], "inactive")
         mock_deactivate_borrower.assert_called_once_with(self.fake_db, self.borrower_id)
@@ -169,7 +180,9 @@ class BorrowerRouteTests(unittest.TestCase):
             side_effect=BorrowerNotFoundError("Borrower not found"),
         ):
             with self.assertRaises(HTTPException) as exc_info:
-                deactivate_borrower_endpoint(self.borrower_id, self.fake_db)
+                deactivate_borrower_endpoint(
+                    self.borrower_id, self.fake_db, self.current_user
+                )
 
         self.assertEqual(exc_info.exception.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(exc_info.exception.detail, "Borrower not found")

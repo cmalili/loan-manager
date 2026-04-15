@@ -47,11 +47,11 @@
 - [x] Test reporting consistency against source data
 
 ## Phase 8 — Authentication and Authorization
-- [ ] Implement user authentication
-- [ ] Add password hashing and verification
-- [ ] Restrict endpoints by role
-- [ ] Limit correction/reversal actions to admin users
-- [ ] Test auth and permissions flows
+- [x] Implement user authentication
+- [x] Add password hashing and verification
+- [x] Restrict endpoints by role
+- [x] Limit correction/reversal actions to admin users
+- [x] Test auth and permissions flows
 
 ## Phase 9 — Frontend
 - [ ] Set up frontend application structure

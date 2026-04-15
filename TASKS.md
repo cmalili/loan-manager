@@ -3,22 +3,21 @@
 This file tracks the current actionable tasks for the Loan Manager project.
 
 ## Current Focus
-Move from audit logging and reporting into authentication and authorization.
+Move from authentication and authorization into frontend and developer setup.
 
 ## Immediate Tasks
-- [x] Record audit logs for important actions
-- [x] Add borrower loan history queries
-- [x] Add overdue loans query/view
-- [x] Add recent payments query/view
-- [x] Add dashboard summary queries
-- [x] Test reporting consistency against source data
+- [x] Implement user authentication
+- [x] Add password hashing and verification
+- [x] Restrict endpoints by role
+- [x] Limit correction/reversal actions to admin users
+- [x] Test auth and permissions flows
 
 ## Near-Term Tasks
-- [ ] Implement user authentication
-- [ ] Add password hashing and verification
-- [ ] Restrict endpoints by role
-- [ ] Limit correction/reversal actions to admin users
-- [ ] Test auth and permissions flows
+- [ ] Set up frontend application structure
+- [ ] Build borrower pages
+- [ ] Build loan pages
+- [ ] Build payment entry page
+- [ ] Build overdue loans page
 
 ## Project Hygiene
 - [x] Commit current database milestone
@@ -36,4 +35,5 @@ Move from audit logging and reporting into authentication and authorization.
 - Phase 5 payment recording and allocation is now implemented and tested.
 - Phase 6 overdue logic and late charges is now implemented and tested.
 - Phase 7 audit logging and reporting is now implemented and tested.
-- The next major goal is Phase 8 authentication and authorization.
+- Phase 8 authentication and authorization is now implemented and tested.
+- The next major goal is Phase 9 frontend implementation.

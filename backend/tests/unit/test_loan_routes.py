@@ -26,6 +26,7 @@ class LoanRouteTests(unittest.TestCase):
         self.fake_db = object()
         self.borrower_id = uuid4()
         self.user_id = uuid4()
+        self.current_user = type("UserStub", (), {"id": self.user_id, "role": "admin"})()
         self.loan_payload = {
             "id": uuid4(),
             "borrower_id": self.borrower_id,
@@ -65,7 +66,7 @@ class LoanRouteTests(unittest.TestCase):
             "app.api.routes.loans.create_loan",
             return_value=self.loan_payload,
         ) as mock_create_loan:
-            result = create_loan_endpoint(payload, self.fake_db)
+            result = create_loan_endpoint(payload, self.fake_db, self.current_user)
 
         self.assertEqual(result["borrower_id"], self.borrower_id)
         mock_create_loan.assert_called_once_with(self.fake_db, payload)
@@ -78,7 +79,7 @@ class LoanRouteTests(unittest.TestCase):
             side_effect=LoanBorrowerNotFoundError("Borrower not found"),
         ):
             with self.assertRaises(HTTPException) as exc_info:
-                create_loan_endpoint(payload, self.fake_db)
+                create_loan_endpoint(payload, self.fake_db, self.current_user)
 
         self.assertEqual(exc_info.exception.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(exc_info.exception.detail, "Borrower not found")
@@ -91,7 +92,7 @@ class LoanRouteTests(unittest.TestCase):
             side_effect=LoanCreatorNotFoundError("User not found"),
         ):
             with self.assertRaises(HTTPException) as exc_info:
-                create_loan_endpoint(payload, self.fake_db)
+                create_loan_endpoint(payload, self.fake_db, self.current_user)
 
         self.assertEqual(exc_info.exception.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(exc_info.exception.detail, "User not found")
@@ -104,7 +105,7 @@ class LoanRouteTests(unittest.TestCase):
             side_effect=ActiveLoanConflictError("Borrower already has an active loan"),
         ):
             with self.assertRaises(HTTPException) as exc_info:
-                create_loan_endpoint(payload, self.fake_db)
+                create_loan_endpoint(payload, self.fake_db, self.current_user)
 
         self.assertEqual(exc_info.exception.status_code, status.HTTP_409_CONFLICT)
         self.assertEqual(exc_info.exception.detail, "Borrower already has an active loan")
@@ -117,12 +118,25 @@ class LoanRouteTests(unittest.TestCase):
             side_effect=LoanValidationError("Grace period must be 7 days in Version 1"),
         ):
             with self.assertRaises(HTTPException) as exc_info:
-                create_loan_endpoint(payload, self.fake_db)
+                create_loan_endpoint(payload, self.fake_db, self.current_user)
 
         self.assertEqual(exc_info.exception.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(
             exc_info.exception.detail,
             "Grace period must be 7 days in Version 1",
+        )
+
+    def test_create_loan_returns_403_when_authenticated_user_mismatches_creator(self) -> None:
+        payload = self.make_payload()
+        other_user = type("UserStub", (), {"id": uuid4(), "role": "admin"})()
+
+        with self.assertRaises(HTTPException) as exc_info:
+            create_loan_endpoint(payload, self.fake_db, other_user)
+
+        self.assertEqual(exc_info.exception.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(
+            exc_info.exception.detail,
+            "Authenticated user must match created_by_user_id",
         )
 
 

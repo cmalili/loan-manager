@@ -14,6 +14,7 @@ os.environ.setdefault("DATABASE_URL", "sqlite+pysqlite:///:memory:")
 from app.api.routes.payments import record_payment_endpoint  # noqa: E402
 from app.schemas.payment import PaymentCreate  # noqa: E402
 from app.services.payment import (  # noqa: E402
+    BackdatedPaymentNotAllowedError,
     PaymentBorrowerNotFoundError,
     PaymentLoanNotFoundError,
     PaymentRecorderNotFoundError,
@@ -24,6 +25,7 @@ from app.services.payment import (  # noqa: E402
 class PaymentRouteTests(unittest.TestCase):
     def setUp(self) -> None:
         self.fake_db = object()
+        self.current_user = None
         self.payment_payload = {
             "id": uuid4(),
             "loan_id": uuid4(),
@@ -41,6 +43,11 @@ class PaymentRouteTests(unittest.TestCase):
             "updated_at": "2026-04-11T12:00:00Z",
             "allocations": [],
         }
+        self.current_user = type(
+            "UserStub",
+            (),
+            {"id": self.payment_payload["recorded_by_user_id"], "role": "staff"},
+        )()
 
     def make_payload(self) -> PaymentCreate:
         return PaymentCreate(
@@ -61,7 +68,7 @@ class PaymentRouteTests(unittest.TestCase):
             "app.api.routes.payments.record_payment",
             return_value=self.payment_payload,
         ) as mock_record_payment:
-            result = record_payment_endpoint(payload, self.fake_db)
+            result = record_payment_endpoint(payload, self.fake_db, self.current_user)
 
         self.assertEqual(result["status"], "recorded")
         mock_record_payment.assert_called_once_with(self.fake_db, payload)
@@ -74,7 +81,7 @@ class PaymentRouteTests(unittest.TestCase):
             side_effect=PaymentLoanNotFoundError("Loan not found"),
         ):
             with self.assertRaises(HTTPException) as exc_info:
-                record_payment_endpoint(payload, self.fake_db)
+                record_payment_endpoint(payload, self.fake_db, self.current_user)
 
         self.assertEqual(exc_info.exception.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(exc_info.exception.detail, "Loan not found")
@@ -87,7 +94,7 @@ class PaymentRouteTests(unittest.TestCase):
             side_effect=PaymentBorrowerNotFoundError("Borrower not found"),
         ):
             with self.assertRaises(HTTPException) as exc_info:
-                record_payment_endpoint(payload, self.fake_db)
+                record_payment_endpoint(payload, self.fake_db, self.current_user)
 
         self.assertEqual(exc_info.exception.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(exc_info.exception.detail, "Borrower not found")
@@ -100,7 +107,7 @@ class PaymentRouteTests(unittest.TestCase):
             side_effect=PaymentRecorderNotFoundError("User not found"),
         ):
             with self.assertRaises(HTTPException) as exc_info:
-                record_payment_endpoint(payload, self.fake_db)
+                record_payment_endpoint(payload, self.fake_db, self.current_user)
 
         self.assertEqual(exc_info.exception.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(exc_info.exception.detail, "User not found")
@@ -113,12 +120,43 @@ class PaymentRouteTests(unittest.TestCase):
             side_effect=PaymentValidationError("Payment amount exceeds outstanding balance"),
         ):
             with self.assertRaises(HTTPException) as exc_info:
-                record_payment_endpoint(payload, self.fake_db)
+                record_payment_endpoint(payload, self.fake_db, self.current_user)
 
         self.assertEqual(exc_info.exception.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(
             exc_info.exception.detail,
             "Payment amount exceeds outstanding balance",
+        )
+
+    def test_record_payment_returns_403_on_backdated_payment_restriction(self) -> None:
+        payload = self.make_payload()
+
+        with patch(
+            "app.api.routes.payments.record_payment",
+            side_effect=BackdatedPaymentNotAllowedError(
+                "Only admin users may record backdated payments"
+            ),
+        ):
+            with self.assertRaises(HTTPException) as exc_info:
+                record_payment_endpoint(payload, self.fake_db, self.current_user)
+
+        self.assertEqual(exc_info.exception.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(
+            exc_info.exception.detail,
+            "Only admin users may record backdated payments",
+        )
+
+    def test_record_payment_returns_403_on_authenticated_user_mismatch(self) -> None:
+        payload = self.make_payload()
+        other_user = type("UserStub", (), {"id": uuid4(), "role": "staff"})()
+
+        with self.assertRaises(HTTPException) as exc_info:
+            record_payment_endpoint(payload, self.fake_db, other_user)
+
+        self.assertEqual(exc_info.exception.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(
+            exc_info.exception.detail,
+            "Authenticated user must match recorded_by_user_id",
         )
 
 

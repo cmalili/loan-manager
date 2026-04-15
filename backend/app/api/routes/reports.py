@@ -7,7 +7,9 @@ from datetime import date
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
+from app.api.dependencies import get_current_user
 from app.db.session import get_db
+from app.models.user import User
 from app.schemas.reporting import (
     DashboardSummaryRead,
     OverdueLoanRead,
@@ -27,6 +29,7 @@ router = APIRouter(prefix="/reports", tags=["reports"])
 def list_overdue_loans_endpoint(
     as_of_date: date = Query(default_factory=date.today),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> list[OverdueLoanRead]:
     """Return overdue loans derived from current delinquency state."""
 
@@ -37,6 +40,7 @@ def list_overdue_loans_endpoint(
 def list_recent_payments_endpoint(
     limit: int = Query(default=20, ge=1, le=100),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> list[RecentPaymentRead]:
     """Return recent recorded payments."""
 
@@ -47,6 +51,7 @@ def list_recent_payments_endpoint(
 def get_dashboard_summary_endpoint(
     as_of_date: date = Query(default_factory=date.today),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> DashboardSummaryRead:
     """Return top-level dashboard metrics."""
 
