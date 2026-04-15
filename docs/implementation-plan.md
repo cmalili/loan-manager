@@ -30,13 +30,13 @@
 - [x] Test partial and full payment flows
 
 ## Phase 6 — Overdue Logic and Late Charges
-- [ ] Implement overdue detection
-- [ ] Apply one-week grace period
-- [ ] Create one-time 10% late charge for overdue installment
-- [ ] Link late charge to schedule item
-- [ ] Implement late-charge interest accrual
-- [ ] Track waived amounts separately
-- [ ] Test overdue and late-charge workflows
+- [x] Implement overdue detection
+- [x] Apply one-week grace period
+- [x] Create one-time 10% late charge for overdue installment
+- [x] Link late charge to schedule item
+- [x] Implement late-charge interest accrual
+- [x] Track waived amounts separately
+- [x] Test overdue and late-charge workflows
 
 ## Phase 7 — Audit and Reporting
 - [ ] Record audit logs for important actions

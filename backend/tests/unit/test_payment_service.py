@@ -112,6 +112,8 @@ class PaymentServiceTests(unittest.TestCase):
         late_charge = self.make_late_charge()
 
         with patch(
+            "app.services.payment.process_loan_overdue_state",
+        ) as mock_process_overdue, patch(
             "app.services.payment.list_schedule_items_for_loan",
             return_value=[schedule_item],
         ), patch(
@@ -135,11 +137,25 @@ class PaymentServiceTests(unittest.TestCase):
                 "regular_interest",
             ],
         )
+        self.assertEqual(mock_process_overdue.call_count, 2)
+        self.assertEqual(
+            mock_process_overdue.call_args_list[0].kwargs["as_of_date"],
+            payment.payment_date,
+        )
 
     def test_record_payment_full_payoff_closes_loan(self) -> None:
         schedule_item = self.make_schedule_item(principal_due=Decimal("100.00"), interest_due=Decimal("20.00"))
+        overdue_calls = {"count": 0}
+
+        def fake_process_overdue(*args, **kwargs):
+            overdue_calls["count"] += 1
+            if overdue_calls["count"] == 2:
+                self.loan.status = "closed"
 
         with patch(
+            "app.services.payment.process_loan_overdue_state",
+            side_effect=fake_process_overdue,
+        ) as mock_process_overdue, patch(
             "app.services.payment.list_schedule_items_for_loan",
             return_value=[schedule_item],
         ), patch(
@@ -156,11 +172,14 @@ class PaymentServiceTests(unittest.TestCase):
             [allocation.allocation_type for allocation in allocations],
             ["regular_interest", "regular_principal"],
         )
+        self.assertEqual(mock_process_overdue.call_count, 2)
 
     def test_record_payment_rejects_overpayment(self) -> None:
         schedule_item = self.make_schedule_item(principal_due=Decimal("50.00"), interest_due=Decimal("10.00"))
 
         with patch(
+            "app.services.payment.process_loan_overdue_state",
+        ), patch(
             "app.services.payment.list_schedule_items_for_loan",
             return_value=[schedule_item],
         ), patch(

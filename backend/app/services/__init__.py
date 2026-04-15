@@ -22,6 +22,11 @@ from app.services.payment import (
     PaymentValidationError,
     record_payment,
 )
+from app.services.overdue import (
+    OverdueProcessingResult,
+    process_loan_overdue_state,
+    process_overdue_loans,
+)
 from app.services.repayment_schedule import (
     build_repayment_schedule,
     build_schedule_items,
@@ -37,6 +42,7 @@ __all__ = [
     "PaymentLoanNotFoundError",
     "PaymentRecorderNotFoundError",
     "PaymentValidationError",
+    "OverdueProcessingResult",
     "build_repayment_schedule",
     "build_schedule_items",
     "create_borrower",
@@ -44,6 +50,8 @@ __all__ = [
     "deactivate_borrower",
     "get_borrower",
     "list_borrowers",
+    "process_loan_overdue_state",
+    "process_overdue_loans",
     "record_payment",
     "update_borrower",
 ]

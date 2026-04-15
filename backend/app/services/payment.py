@@ -16,6 +16,7 @@ from app.models.payment_allocation import PaymentAllocation
 from app.models.repayment_schedule_item import RepaymentScheduleItem
 from app.models.user import User
 from app.schemas.payment import PaymentCreate
+from app.services.overdue import process_loan_overdue_state
 
 
 ZERO = Decimal("0.00")
@@ -199,6 +200,13 @@ def record_payment(db: Session, payment_in: PaymentCreate) -> Payment:
     if loan.borrower_id != payment_in.borrower_id:
         raise PaymentValidationError("Payment borrower must match the loan borrower")
 
+    process_loan_overdue_state(
+        db,
+        loan,
+        as_of_date=payment_in.payment_date,
+        created_by_user_id=payment_in.recorded_by_user_id,
+    )
+
     schedule_items = list_schedule_items_for_loan(db, payment_in.loan_id)
     late_charges = list_late_charges_for_loan(db, payment_in.loan_id)
     outstanding_balance = total_outstanding_balance(schedule_items, late_charges)
@@ -240,9 +248,12 @@ def record_payment(db: Session, payment_in: PaymentCreate) -> Payment:
     allocations = late_charge_allocations + schedule_allocations
     db.add_all(allocations)
 
-    updated_outstanding = total_outstanding_balance(schedule_items, late_charges)
-    if updated_outstanding == ZERO:
-        loan.status = "closed"
+    process_loan_overdue_state(
+        db,
+        loan,
+        as_of_date=payment_in.payment_date,
+        created_by_user_id=payment_in.recorded_by_user_id,
+    )
 
     db.commit()
     db.refresh(payment)

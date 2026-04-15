@@ -6,7 +6,7 @@ import uuid
 from datetime import date, datetime
 from decimal import Decimal
 
-from sqlalchemy import CheckConstraint, Date, DateTime, ForeignKey, Index, Numeric, Text, UniqueConstraint, func, text
+from sqlalchemy import CheckConstraint, Date, DateTime, ForeignKey, Index, Integer, Numeric, Text, UniqueConstraint, func, text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -31,6 +31,10 @@ class LateCharge(Base):
         CheckConstraint("principal_paid >= 0", name="ck_late_charges_principal_paid_nonnegative"),
         CheckConstraint("interest_paid >= 0", name="ck_late_charges_interest_paid_nonnegative"),
         CheckConstraint("waived_amount >= 0", name="ck_late_charges_waived_amount_nonnegative"),
+        CheckConstraint(
+            "interest_periods_accrued >= 0",
+            name="ck_late_charges_interest_periods_accrued_nonnegative",
+        ),
         CheckConstraint(
             "status IN ('outstanding', 'partially_paid', 'paid', 'waived', 'voided')",
             name="ck_late_charges_status",
@@ -75,6 +79,12 @@ class LateCharge(Base):
     )
     waived_amount: Mapped[Decimal] = mapped_column(
         Numeric(12, 2), nullable=False, default=Decimal("0.00"), server_default=text("0")
+    )
+    interest_periods_accrued: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=0,
+        server_default=text("0"),
     )
     status: Mapped[str] = mapped_column(Text, nullable=False)
     notes: Mapped[str | None] = mapped_column(Text)
