@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.db.session import get_db
 from app.schemas.borrower import BorrowerCreate, BorrowerRead, BorrowerUpdate
+from app.schemas.loan import LoanRead
 from app.services.borrower import (
     BorrowerNotFoundError,
     create_borrower,
@@ -17,6 +18,7 @@ from app.services.borrower import (
     list_borrowers,
     update_borrower,
 )
+from app.services.reporting import list_borrower_loan_history
 
 router = APIRouter(prefix="/borrowers", tags=["borrowers"])
 
@@ -36,6 +38,21 @@ def get_borrower_endpoint(
 
     try:
         return get_borrower(db, borrower_id)
+    except BorrowerNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
+
+
+@router.get("/{borrower_id}/loans", response_model=list[LoanRead])
+def list_borrower_loans_endpoint(
+    borrower_id: UUID, db: Session = Depends(get_db)
+) -> list[LoanRead]:
+    """Return the loan history for one borrower."""
+
+    try:
+        return list_borrower_loan_history(db, borrower_id)
     except BorrowerNotFoundError as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

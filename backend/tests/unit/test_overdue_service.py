@@ -110,7 +110,7 @@ class OverdueServiceTests(unittest.TestCase):
         self.assertEqual(result.schedule_items_marked_overdue, 1)
         self.assertEqual(result.late_charges_created, 1)
         self.assertEqual(loan.status, "overdue")
-        self.db.add.assert_called_once()
+        self.assertEqual(self.db.add.call_count, 3)
         self.db.flush.assert_called_once()
 
     def test_process_loan_accrues_late_charge_interest_by_completed_periods(self) -> None:

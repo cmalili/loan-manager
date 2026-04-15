@@ -3,22 +3,22 @@
 This file tracks the current actionable tasks for the Loan Manager project.
 
 ## Current Focus
-Move from overdue logic and late charges into audit logging and reporting.
+Move from audit logging and reporting into authentication and authorization.
 
 ## Immediate Tasks
-- [x] Implement overdue detection
-- [x] Apply one-week grace period
-- [x] Create one-time 10% late charge for overdue installment
-- [x] Link late charge to schedule item
-- [x] Implement late-charge interest accrual
-- [x] Test overdue and late-charge workflows
+- [x] Record audit logs for important actions
+- [x] Add borrower loan history queries
+- [x] Add overdue loans query/view
+- [x] Add recent payments query/view
+- [x] Add dashboard summary queries
+- [x] Test reporting consistency against source data
 
 ## Near-Term Tasks
-- [ ] Record audit logs for important actions
-- [ ] Add borrower loan history queries
-- [ ] Add overdue loans query/view
-- [ ] Add recent payments query/view
-- [ ] Add dashboard summary queries
+- [ ] Implement user authentication
+- [ ] Add password hashing and verification
+- [ ] Restrict endpoints by role
+- [ ] Limit correction/reversal actions to admin users
+- [ ] Test auth and permissions flows
 
 ## Project Hygiene
 - [x] Commit current database milestone
@@ -35,4 +35,5 @@ Move from overdue logic and late charges into audit logging and reporting.
 - Phase 4 repayment schedule generation is now implemented and tested.
 - Phase 5 payment recording and allocation is now implemented and tested.
 - Phase 6 overdue logic and late charges is now implemented and tested.
-- The next major goal is Phase 7 audit and reporting.
+- Phase 7 audit logging and reporting is now implemented and tested.
+- The next major goal is Phase 8 authentication and authorization.

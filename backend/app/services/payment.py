@@ -16,6 +16,7 @@ from app.models.payment_allocation import PaymentAllocation
 from app.models.repayment_schedule_item import RepaymentScheduleItem
 from app.models.user import User
 from app.schemas.payment import PaymentCreate
+from app.services.audit import record_audit_log, snapshot_model
 from app.services.overdue import process_loan_overdue_state
 
 
@@ -253,6 +254,15 @@ def record_payment(db: Session, payment_in: PaymentCreate) -> Payment:
         loan,
         as_of_date=payment_in.payment_date,
         created_by_user_id=payment_in.recorded_by_user_id,
+    )
+    record_audit_log(
+        db,
+        user_id=payment.recorded_by_user_id,
+        entity_type="payment",
+        entity_id=payment.id,
+        action_type="create",
+        before_state=None,
+        after_state=snapshot_model(payment),
     )
 
     db.commit()

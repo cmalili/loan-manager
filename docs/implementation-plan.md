@@ -39,12 +39,12 @@
 - [x] Test overdue and late-charge workflows
 
 ## Phase 7 — Audit and Reporting
-- [ ] Record audit logs for important actions
-- [ ] Add borrower loan history queries
-- [ ] Add overdue loans query/view
-- [ ] Add recent payments query/view
-- [ ] Add dashboard summary queries
-- [ ] Test reporting consistency against source data
+- [x] Record audit logs for important actions
+- [x] Add borrower loan history queries
+- [x] Add overdue loans query/view
+- [x] Add recent payments query/view
+- [x] Add dashboard summary queries
+- [x] Test reporting consistency against source data
 
 ## Phase 8 — Authentication and Authorization
 - [ ] Implement user authentication

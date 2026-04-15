@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 from app.models.late_charge import LateCharge
 from app.models.loan import Loan
 from app.models.repayment_schedule_item import RepaymentScheduleItem
+from app.services.audit import record_audit_log, snapshot_model
 from app.services.repayment_schedule import add_months
 
 
@@ -263,13 +264,16 @@ def list_late_charges_for_loan(db: Session, loan_id) -> list[LateCharge]:
 
 
 def sync_loan_status(
+    db: Session,
     loan: Loan,
     *,
     schedule_items: list[RepaymentScheduleItem],
     late_charges: list[LateCharge],
+    acting_user_id: UUID | None,
 ) -> None:
     """Update the loan status from current balances and delinquency state."""
 
+    previous_status = loan.status
     regular_outstanding = sum(total_regular_outstanding(item) for item in schedule_items)
     late_charge_outstanding = sum(
         late_charge_interest_outstanding(charge) + late_charge_principal_outstanding(charge)
@@ -287,6 +291,17 @@ def sync_loan_status(
         loan.status = "overdue"
     elif loan.status in {"active", "overdue", "closed"}:
         loan.status = "active"
+
+    if previous_status != loan.status:
+        record_audit_log(
+            db,
+            user_id=acting_user_id,
+            entity_type="loan",
+            entity_id=loan.id,
+            action_type="status_change",
+            before_state={"status": previous_status},
+            after_state={"status": loan.status},
+        )
 
 
 def process_loan_overdue_state(
@@ -325,6 +340,15 @@ def process_loan_overdue_state(
                 db.add(late_charge)
                 db.flush()
                 item.late_charge = late_charge
+                record_audit_log(
+                    db,
+                    user_id=created_by_user_id,
+                    entity_type="late_charge",
+                    entity_id=late_charge.id,
+                    action_type="create",
+                    before_state=None,
+                    after_state=snapshot_model(late_charge),
+                )
                 result.late_charges_created += 1
 
     late_charges = list_late_charges_for_loan(db, loan.id)
@@ -333,7 +357,13 @@ def process_loan_overdue_state(
             result.late_charges_accrued += 1
         sync_late_charge_status(charge)
 
-    sync_loan_status(loan, schedule_items=schedule_items, late_charges=late_charges)
+    sync_loan_status(
+        db,
+        loan,
+        schedule_items=schedule_items,
+        late_charges=late_charges,
+        acting_user_id=created_by_user_id,
+    )
     return result
 
 

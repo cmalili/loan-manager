@@ -15,6 +15,7 @@ from app.api.routes.borrowers import (  # noqa: E402
     create_borrower_endpoint,
     deactivate_borrower_endpoint,
     get_borrower_endpoint,
+    list_borrower_loans_endpoint,
     update_borrower_endpoint,
 )
 from app.schemas.borrower import BorrowerCreate, BorrowerUpdate  # noqa: E402
@@ -75,6 +76,46 @@ class BorrowerRouteTests(unittest.TestCase):
 
         self.assertEqual(result["full_name"], "Jane Doe")
         mock_create_borrower.assert_called_once_with(self.fake_db, borrower_in)
+
+    def test_list_borrower_loans_returns_history(self) -> None:
+        loan_payload = [
+            {
+                "id": uuid4(),
+                "borrower_id": self.borrower_id,
+                "created_by_user_id": uuid4(),
+                "principal_amount": "1000.00",
+                "repayment_frequency": "weekly",
+                "periodic_interest_rate": "8.00",
+                "term_length": 4,
+                "start_date": "2026-04-01",
+                "end_date": "2026-04-29",
+                "status": "closed",
+                "grace_period_days": 7,
+                "notes": None,
+                "created_at": "2026-04-11T12:00:00Z",
+                "updated_at": "2026-04-11T12:00:00Z",
+            }
+        ]
+
+        with patch(
+            "app.api.routes.borrowers.list_borrower_loan_history",
+            return_value=loan_payload,
+        ) as mock_history:
+            result = list_borrower_loans_endpoint(self.borrower_id, self.fake_db)
+
+        self.assertEqual(result, loan_payload)
+        mock_history.assert_called_once_with(self.fake_db, self.borrower_id)
+
+    def test_list_borrower_loans_returns_404_when_borrower_missing(self) -> None:
+        with patch(
+            "app.api.routes.borrowers.list_borrower_loan_history",
+            side_effect=BorrowerNotFoundError("Borrower not found"),
+        ):
+            with self.assertRaises(HTTPException) as exc_info:
+                list_borrower_loans_endpoint(self.borrower_id, self.fake_db)
+
+        self.assertEqual(exc_info.exception.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(exc_info.exception.detail, "Borrower not found")
 
     def test_update_borrower_passes_partial_schema_to_service(self) -> None:
         borrower_in = BorrowerUpdate(

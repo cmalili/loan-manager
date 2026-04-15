@@ -12,6 +12,7 @@ from app.models.borrower import Borrower
 from app.models.loan import Loan
 from app.models.user import User
 from app.schemas.loan import LoanCreate
+from app.services.audit import record_audit_log, snapshot_model
 from app.services.repayment_schedule import add_months, build_schedule_items
 
 
@@ -117,6 +118,15 @@ def create_loan(db: Session, loan_in: LoanCreate) -> Loan:
     db.flush()
     schedule_items = build_schedule_items(loan)
     db.add_all(schedule_items)
+    record_audit_log(
+        db,
+        user_id=loan.created_by_user_id,
+        entity_type="loan",
+        entity_id=loan.id,
+        action_type="create",
+        before_state=None,
+        after_state=snapshot_model(loan),
+    )
     db.commit()
     db.refresh(loan)
     return loan

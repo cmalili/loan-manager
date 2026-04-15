@@ -1,5 +1,6 @@
 """Business services package."""
 
+from app.services.audit import record_audit_log, snapshot_model
 from app.services.borrower import (
     BorrowerNotFoundError,
     create_borrower,
@@ -27,6 +28,12 @@ from app.services.overdue import (
     process_loan_overdue_state,
     process_overdue_loans,
 )
+from app.services.reporting import (
+    get_dashboard_summary,
+    list_borrower_loan_history,
+    list_overdue_loans,
+    list_recent_payments,
+)
 from app.services.repayment_schedule import (
     build_repayment_schedule,
     build_schedule_items,
@@ -49,9 +56,15 @@ __all__ = [
     "create_loan",
     "deactivate_borrower",
     "get_borrower",
+    "get_dashboard_summary",
     "list_borrowers",
+    "list_borrower_loan_history",
+    "list_overdue_loans",
+    "list_recent_payments",
     "process_loan_overdue_state",
     "process_overdue_loans",
+    "record_audit_log",
     "record_payment",
+    "snapshot_model",
     "update_borrower",
 ]
