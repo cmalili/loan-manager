@@ -20,14 +20,14 @@
 - [x] Test schedule totals and installment correctness
 
 ## Phase 5 — Payment Recording and Allocation
-- [ ] Create Pydantic schemas for payments
-- [ ] Create payment service layer
-- [ ] Implement payment recording
-- [ ] Implement payment allocation logic
-- [ ] Allocate in order: late-charge interest → late-charge principal → regular interest → regular principal
-- [ ] Update schedule item paid fields correctly
-- [ ] Reject overpayments
-- [ ] Test partial and full payment flows
+- [x] Create Pydantic schemas for payments
+- [x] Create payment service layer
+- [x] Implement payment recording
+- [x] Implement payment allocation logic
+- [x] Allocate in order: late-charge interest → late-charge principal → regular interest → regular principal
+- [x] Update schedule item paid fields correctly
+- [x] Reject overpayments
+- [x] Test partial and full payment flows
 
 ## Phase 6 — Overdue Logic and Late Charges
 - [ ] Implement overdue detection

@@ -3,6 +3,7 @@
 
 from app.schemas.borrower import BorrowerCreate, BorrowerRead, BorrowerUpdate
 from app.schemas.loan import LoanCreate, LoanRead
+from app.schemas.payment import PaymentCreate, PaymentRead
 
 __all__ = [
     "BorrowerCreate",
@@ -10,4 +11,6 @@ __all__ = [
     "BorrowerUpdate",
     "LoanCreate",
     "LoanRead",
+    "PaymentCreate",
+    "PaymentRead",
 ]

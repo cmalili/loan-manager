@@ -15,6 +15,13 @@ from app.services.loan import (
     LoanValidationError,
     create_loan,
 )
+from app.services.payment import (
+    PaymentBorrowerNotFoundError,
+    PaymentLoanNotFoundError,
+    PaymentRecorderNotFoundError,
+    PaymentValidationError,
+    record_payment,
+)
 from app.services.repayment_schedule import (
     build_repayment_schedule,
     build_schedule_items,
@@ -26,6 +33,10 @@ __all__ = [
     "LoanBorrowerNotFoundError",
     "LoanCreatorNotFoundError",
     "LoanValidationError",
+    "PaymentBorrowerNotFoundError",
+    "PaymentLoanNotFoundError",
+    "PaymentRecorderNotFoundError",
+    "PaymentValidationError",
     "build_repayment_schedule",
     "build_schedule_items",
     "create_borrower",
@@ -33,5 +44,6 @@ __all__ = [
     "deactivate_borrower",
     "get_borrower",
     "list_borrowers",
+    "record_payment",
     "update_borrower",
 ]

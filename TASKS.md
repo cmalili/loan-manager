@@ -3,23 +3,23 @@
 This file tracks the current actionable tasks for the Loan Manager project.
 
 ## Current Focus
-Move from loan creation into payment recording and allocation.
+Move from payment recording into overdue logic and late charges.
 
 ## Immediate Tasks
-- [x] Create loan Pydantic schemas
-- [x] Create loan service layer
-- [x] Implement create loan endpoint
-- [x] Implement repayment schedule generation service
-- [x] Support weekly schedules
-- [x] Support monthly schedules
-- [x] Store generated repayment schedule items
-- [x] Test schedule totals and installment correctness
+- [x] Create payment Pydantic schemas
+- [x] Create payment service layer
+- [x] Implement payment recording endpoint
+- [x] Implement payment allocation logic
+- [x] Update schedule item paid fields correctly
+- [x] Reject overpayments
+- [x] Test partial and full payment flows
 
 ## Near-Term Tasks
-- [ ] Create payment Pydantic schemas
-- [ ] Create payment service layer
-- [ ] Implement payment recording endpoint
-- [ ] Implement payment allocation logic
+- [ ] Implement overdue detection
+- [ ] Apply one-week grace period
+- [ ] Create one-time 10% late charge for overdue installment
+- [ ] Link late charge to schedule item
+- [ ] Implement late-charge interest accrual
 
 ## Project Hygiene
 - [x] Commit current database milestone
@@ -34,4 +34,5 @@ Move from loan creation into payment recording and allocation.
 - The borrower vertical slice is now working end to end.
 - Phase 3 loan creation and validation is now implemented and wired into the app.
 - Phase 4 repayment schedule generation is now implemented and tested.
-- The next major goal is Phase 5 payment recording and allocation.
+- Phase 5 payment recording and allocation is now implemented and tested.
+- The next major goal is Phase 6 overdue logic and late charges.
