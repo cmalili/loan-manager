@@ -21,6 +21,7 @@ from app.schemas.borrower import BorrowerCreate, BorrowerUpdate  # noqa: E402
 class BorrowerServiceTests(unittest.TestCase):
     def setUp(self) -> None:
         self.borrower_id = uuid4()
+        self.user_id = uuid4()
         self.borrower = Borrower(
             id=self.borrower_id,
             full_name="Jane Doe",
@@ -46,10 +47,15 @@ class BorrowerServiceTests(unittest.TestCase):
             status="active",
         )
 
-        borrower = create_borrower(self.db, borrower_in)
+        borrower = create_borrower(
+            self.db,
+            borrower_in,
+            acting_user_id=self.user_id,
+        )
 
         self.assertEqual(borrower.full_name, "Jane Doe")
         self.assertEqual(self.db.add.call_count, 2)
+        self.assertEqual(self.db.add.call_args_list[1].args[0].user_id, self.user_id)
         self.assertEqual(self.db.flush.call_count, 1)
         self.db.commit.assert_called_once()
         self.db.refresh.assert_called_once_with(borrower)
@@ -57,18 +63,29 @@ class BorrowerServiceTests(unittest.TestCase):
     def test_update_borrower_records_audit_log(self) -> None:
         borrower_in = BorrowerUpdate(phone_number="555-9999")
 
-        borrower = update_borrower(self.db, self.borrower_id, borrower_in)
+        borrower = update_borrower(
+            self.db,
+            self.borrower_id,
+            borrower_in,
+            acting_user_id=self.user_id,
+        )
 
         self.assertEqual(borrower.phone_number, "555-9999")
         self.assertEqual(self.db.add.call_count, 2)
+        self.assertEqual(self.db.add.call_args_list[1].args[0].user_id, self.user_id)
         self.assertEqual(self.db.flush.call_count, 1)
         self.db.commit.assert_called_once()
 
     def test_deactivate_borrower_records_status_change_audit_log(self) -> None:
-        borrower = deactivate_borrower(self.db, self.borrower_id)
+        borrower = deactivate_borrower(
+            self.db,
+            self.borrower_id,
+            acting_user_id=self.user_id,
+        )
 
         self.assertEqual(borrower.status, "inactive")
         self.assertEqual(self.db.add.call_count, 2)
+        self.assertEqual(self.db.add.call_args_list[1].args[0].user_id, self.user_id)
         self.assertEqual(self.db.flush.call_count, 1)
         self.db.commit.assert_called_once()
 

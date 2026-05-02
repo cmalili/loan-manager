@@ -7,11 +7,12 @@ from decimal import Decimal
 from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
+from pydantic import ValidationError
+
 os.environ.setdefault("DATABASE_URL", "sqlite+pysqlite:///:memory:")
 
 from app.models.late_charge import LateCharge  # noqa: E402
 from app.models.loan import Loan  # noqa: E402
-from app.models.payment_allocation import PaymentAllocation  # noqa: E402
 from app.models.repayment_schedule_item import RepaymentScheduleItem  # noqa: E402
 from app.schemas.payment import PaymentCreate  # noqa: E402
 from app.services.payment import (  # noqa: E402
@@ -144,6 +145,88 @@ class PaymentServiceTests(unittest.TestCase):
             payment.payment_date,
         )
 
+    def test_record_payment_allocates_all_late_charge_interest_first(self) -> None:
+        schedule_item = self.make_schedule_item()
+        first_charge = self.make_late_charge(
+            accrued_interest_amount=Decimal("2.00"),
+            charge_principal_amount=Decimal("10.00"),
+        )
+        second_charge = self.make_late_charge(
+            id=uuid4(),
+            schedule_item_id=uuid4(),
+            trigger_date=date(2026, 5, 10),
+            accrued_interest_amount=Decimal("3.00"),
+            charge_principal_amount=Decimal("10.00"),
+        )
+
+        with patch(
+            "app.services.payment.process_loan_overdue_state",
+        ), patch(
+            "app.services.payment.list_schedule_items_for_loan",
+            return_value=[schedule_item],
+        ), patch(
+            "app.services.payment.list_late_charges_for_loan",
+            return_value=[first_charge, second_charge],
+        ):
+            record_payment(self.db, self.make_payment(amount=Decimal("6.00")))
+
+        self.assertEqual(first_charge.interest_paid, Decimal("2.00"))
+        self.assertEqual(second_charge.interest_paid, Decimal("3.00"))
+        self.assertEqual(first_charge.principal_paid, Decimal("1.00"))
+        self.assertEqual(second_charge.principal_paid, Decimal("0.00"))
+
+        allocations = self.db.add_all.call_args.args[0]
+        self.assertEqual(
+            [allocation.allocation_type for allocation in allocations],
+            [
+                "late_charge_interest",
+                "late_charge_interest",
+                "late_charge_principal",
+            ],
+        )
+        self.assertEqual(
+            [allocation.late_charge_id for allocation in allocations],
+            [first_charge.id, second_charge.id, first_charge.id],
+        )
+
+    def test_record_payment_allocates_all_regular_interest_first(self) -> None:
+        first_item = self.make_schedule_item(
+            principal_due=Decimal("50.00"),
+            interest_due=Decimal("10.00"),
+        )
+        second_item = self.make_schedule_item(
+            id=uuid4(),
+            installment_number=2,
+            principal_due=Decimal("50.00"),
+            interest_due=Decimal("20.00"),
+        )
+
+        with patch(
+            "app.services.payment.process_loan_overdue_state",
+        ), patch(
+            "app.services.payment.list_schedule_items_for_loan",
+            return_value=[first_item, second_item],
+        ), patch(
+            "app.services.payment.list_late_charges_for_loan",
+            return_value=[],
+        ):
+            record_payment(self.db, self.make_payment(amount=Decimal("35.00")))
+
+        self.assertEqual(first_item.interest_paid, Decimal("10.00"))
+        self.assertEqual(second_item.interest_paid, Decimal("20.00"))
+        self.assertEqual(first_item.principal_paid, Decimal("5.00"))
+        self.assertEqual(second_item.principal_paid, Decimal("0.00"))
+
+        allocations = self.db.add_all.call_args.args[0]
+        self.assertEqual(
+            [allocation.allocation_type for allocation in allocations],
+            ["regular_interest", "regular_interest", "regular_principal"],
+        )
+        self.assertEqual(
+            [allocation.schedule_item_id for allocation in allocations],
+            [first_item.id, second_item.id, first_item.id],
+        )
+
     def test_record_payment_full_payoff_closes_loan(self) -> None:
         schedule_item = self.make_schedule_item(principal_due=Decimal("100.00"), interest_due=Decimal("20.00"))
         overdue_calls = {"count": 0}
@@ -190,6 +273,12 @@ class PaymentServiceTests(unittest.TestCase):
             with self.assertRaisesRegex(PaymentValidationError, "exceeds outstanding balance"):
                 record_payment(self.db, self.make_payment(amount=Decimal("70.00")))
 
+    def test_record_payment_rejects_cancelled_loan(self) -> None:
+        self.loan.status = "cancelled"
+
+        with self.assertRaisesRegex(PaymentValidationError, "Cancelled loans"):
+            record_payment(self.db, self.make_payment())
+
     def test_record_payment_rejects_borrower_mismatch(self) -> None:
         wrong_borrower_id = uuid4()
         wrong_borrower = MagicMock(id=wrong_borrower_id)
@@ -224,6 +313,10 @@ class PaymentServiceTests(unittest.TestCase):
                 self.db,
                 self.make_payment(payment_date=date.today() - timedelta(days=1)),
             )
+
+    def test_payment_schema_rejects_more_than_two_decimal_places(self) -> None:
+        with self.assertRaises(ValidationError):
+            self.make_payment(amount=Decimal("10.001"))
 
 
 if __name__ == "__main__":

@@ -25,7 +25,7 @@ class PaymentCreate(BaseModel):
     loan_id: UUID
     borrower_id: UUID
     recorded_by_user_id: UUID
-    amount: Decimal = Field(gt=0)
+    amount: Decimal = Field(gt=0, max_digits=12, decimal_places=2)
     payment_date: date
     payment_method: str | None = None
     reference_code: str | None = None

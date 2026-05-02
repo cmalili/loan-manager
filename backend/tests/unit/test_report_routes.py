@@ -19,6 +19,7 @@ from app.api.routes.reports import (  # noqa: E402
 class ReportRouteTests(unittest.TestCase):
     def setUp(self) -> None:
         self.fake_db = object()
+        self.current_user = type("UserStub", (), {"id": uuid4(), "role": "admin"})()
 
     def test_list_overdue_loans_returns_report_rows(self) -> None:
         rows = [
@@ -40,10 +41,16 @@ class ReportRouteTests(unittest.TestCase):
             "app.api.routes.reports.list_overdue_loans",
             return_value=rows,
         ) as mock_list:
-            result = list_overdue_loans_endpoint(date(2026, 4, 15), self.fake_db)
+            result = list_overdue_loans_endpoint(
+                date(2026, 4, 15), self.fake_db, self.current_user
+            )
 
         self.assertEqual(result, rows)
-        mock_list.assert_called_once_with(self.fake_db, as_of_date=date(2026, 4, 15))
+        mock_list.assert_called_once_with(
+            self.fake_db,
+            as_of_date=date(2026, 4, 15),
+            acting_user_id=self.current_user.id,
+        )
 
     def test_list_recent_payments_returns_rows(self) -> None:
         rows = [
@@ -70,7 +77,7 @@ class ReportRouteTests(unittest.TestCase):
             "app.api.routes.reports.list_recent_payments",
             return_value=rows,
         ) as mock_list:
-            result = list_recent_payments_endpoint(10, self.fake_db)
+            result = list_recent_payments_endpoint(10, self.fake_db, self.current_user)
 
         self.assertEqual(result, rows)
         mock_list.assert_called_once_with(self.fake_db, limit=10)
@@ -90,10 +97,16 @@ class ReportRouteTests(unittest.TestCase):
             "app.api.routes.reports.get_dashboard_summary",
             return_value=summary,
         ) as mock_summary:
-            result = get_dashboard_summary_endpoint(date(2026, 4, 15), self.fake_db)
+            result = get_dashboard_summary_endpoint(
+                date(2026, 4, 15), self.fake_db, self.current_user
+            )
 
         self.assertEqual(result, summary)
-        mock_summary.assert_called_once_with(self.fake_db, as_of_date=date(2026, 4, 15))
+        mock_summary.assert_called_once_with(
+            self.fake_db,
+            as_of_date=date(2026, 4, 15),
+            acting_user_id=self.current_user.id,
+        )
 
 
 if __name__ == "__main__":

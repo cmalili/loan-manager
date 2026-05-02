@@ -32,7 +32,12 @@ def get_borrower(db: Session, borrower_id: UUID) -> Borrower:
     return borrower
 
 
-def create_borrower(db: Session, borrower_in: BorrowerCreate) -> Borrower:
+def create_borrower(
+    db: Session,
+    borrower_in: BorrowerCreate,
+    *,
+    acting_user_id: UUID | None = None,
+) -> Borrower:
     """Create and persist a borrower."""
 
     borrower = Borrower(**borrower_in.model_dump())
@@ -40,7 +45,7 @@ def create_borrower(db: Session, borrower_in: BorrowerCreate) -> Borrower:
     db.flush()
     record_audit_log(
         db,
-        user_id=None,
+        user_id=acting_user_id,
         entity_type="borrower",
         entity_id=borrower.id,
         action_type="create",
@@ -52,7 +57,13 @@ def create_borrower(db: Session, borrower_in: BorrowerCreate) -> Borrower:
     return borrower
 
 
-def update_borrower(db: Session, borrower_id: UUID, borrower_in: BorrowerUpdate) -> Borrower:
+def update_borrower(
+    db: Session,
+    borrower_id: UUID,
+    borrower_in: BorrowerUpdate,
+    *,
+    acting_user_id: UUID | None = None,
+) -> Borrower:
     """Apply a partial update to an existing borrower."""
 
     borrower = get_borrower(db, borrower_id)
@@ -65,7 +76,7 @@ def update_borrower(db: Session, borrower_id: UUID, borrower_in: BorrowerUpdate)
     db.flush()
     record_audit_log(
         db,
-        user_id=None,
+        user_id=acting_user_id,
         entity_type="borrower",
         entity_id=borrower.id,
         action_type="update",
@@ -77,7 +88,12 @@ def update_borrower(db: Session, borrower_id: UUID, borrower_in: BorrowerUpdate)
     return borrower
 
 
-def deactivate_borrower(db: Session, borrower_id: UUID) -> Borrower:
+def deactivate_borrower(
+    db: Session,
+    borrower_id: UUID,
+    *,
+    acting_user_id: UUID | None = None,
+) -> Borrower:
     """Mark a borrower inactive while preserving history."""
 
     borrower = get_borrower(db, borrower_id)
@@ -87,7 +103,7 @@ def deactivate_borrower(db: Session, borrower_id: UUID) -> Borrower:
     db.flush()
     record_audit_log(
         db,
-        user_id=None,
+        user_id=acting_user_id,
         entity_type="borrower",
         entity_id=borrower.id,
         action_type="status_change",

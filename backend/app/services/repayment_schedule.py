@@ -5,14 +5,11 @@ from __future__ import annotations
 import calendar
 from dataclasses import dataclass
 from datetime import date, timedelta
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import Decimal
 
 from app.models.loan import Loan
 from app.models.repayment_schedule_item import RepaymentScheduleItem
-
-
-TWOPLACES = Decimal("0.01")
-ONE_HUNDRED = Decimal("100")
+from app.services.money import ONE_HUNDRED, quantize_money
 
 
 @dataclass(slots=True)
@@ -26,12 +23,6 @@ class ScheduleInstallment:
     status: str = "pending"
 
 
-def quantize_money(value: Decimal) -> Decimal:
-    """Round money values to two decimal places using a stable rule."""
-
-    return value.quantize(TWOPLACES, rounding=ROUND_HALF_UP)
-
-
 def add_months(value: date, months: int) -> date:
     """Add calendar months while clamping to the target month length."""
 
@@ -42,7 +33,11 @@ def add_months(value: date, months: int) -> date:
     return date(year, month, day)
 
 
-def next_due_date(start_date: date, repayment_frequency: str, installment_number: int) -> date:
+def next_due_date(
+    start_date: date,
+    repayment_frequency: str,
+    installment_number: int,
+) -> date:
     """Return the due date for a given installment number."""
 
     if repayment_frequency == "weekly":
@@ -67,7 +62,11 @@ def build_repayment_schedule(loan: Loan) -> list[ScheduleInstallment]:
             principal_due = base_principal_installment
 
         interest_due = quantize_money(remaining_principal * periodic_rate)
-        due_date = next_due_date(loan.start_date, loan.repayment_frequency, installment_number)
+        due_date = next_due_date(
+            loan.start_date,
+            loan.repayment_frequency,
+            installment_number,
+        )
 
         installments.append(
             ScheduleInstallment(

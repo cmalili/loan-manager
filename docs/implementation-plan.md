@@ -53,14 +53,43 @@
 - [x] Limit correction/reversal actions to admin users
 - [x] Test auth and permissions flows
 
-## Phase 9 — Frontend
-- [ ] Set up frontend application structure
-- [ ] Build borrower pages
-- [ ] Build loan pages
-- [ ] Build payment entry page
-- [ ] Build overdue loans page
-- [ ] Connect frontend to backend API
-- [ ] Test basic end-to-end UI flows
+## Phase 9A — Frontend Foundation
+- [x] Set up frontend application structure
+- [x] Add routing and app shell
+- [x] Implement auth token storage and protected-route handling
+- [x] Create API client layer for backend integration
+- [x] Test basic authenticated navigation flow
+
+## Phase 9B — Borrower UI
+- [x] Build borrower list page
+- [ ] Build borrower detail page
+- [x] Build borrower create/edit flows
+- [ ] Support borrower deactivation flow
+- [ ] Test borrower UI flows with a browser
+
+## Phase 9C — Loan UI
+- [x] Build loan creation page
+- [ ] Build loan detail page
+- [ ] Display repayment schedule on loan detail views
+- [ ] Test loan creation and loan detail flows with a browser
+
+## Phase 9D — Payment UI
+- [x] Build payment entry page
+- [x] Show allocation and validation feedback
+- [x] Build recent payments view
+- [ ] Test payment entry flows with a browser
+
+## Phase 9E — Overdue and Reporting UI
+- [x] Build overdue loans page
+- [x] Build dashboard summary view
+- [x] Surface borrower loan history in the UI
+- [ ] Test overdue and reporting flows with a browser
+
+## Phase 9F — Frontend Integration and QA
+- [x] Connect all frontend views to backend API
+- [x] Validate role-based route protection in the UI
+- [ ] Test core end-to-end UI flows
+- [ ] Fix integration polish issues across mobile and desktop
 
 ## Phase 10 — Quality, Deployment, and Documentation
 - [ ] Add unit tests

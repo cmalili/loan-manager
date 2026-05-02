@@ -1,17 +1,42 @@
 # Backend
 
-FastAPI backend scaffold for the Internal Loan Management System.
+FastAPI backend for the internal Loan Manager system.
 
-## Intended Structure
+## Structure
 
-- `app/api/` for API routers and request handling
-- `app/core/` for settings, security, and shared application configuration
-- `app/db/` for database session and persistence setup
-- `app/models/` for ORM/domain persistence models
-- `app/schemas/` for validation and serialization schemas
-- `app/services/` for business workflows and use-case logic
-- `alembic/` for database migrations
-- `tests/` for automated backend tests
-- `scripts/` for local development and maintenance helpers
+- `app/api/` contains route handlers and dependency wiring.
+- `app/core/` contains settings and security helpers.
+- `app/db/` contains database session setup.
+- `app/models/` contains SQLAlchemy ORM models.
+- `app/schemas/` contains Pydantic request and response schemas.
+- `app/services/` contains business workflows and financial rules.
+- `alembic/` contains PostgreSQL migrations.
+- `tests/` contains unit tests.
 
-No application logic has been added yet.
+Keep business logic in `app/services/`; route handlers should stay thin.
+
+## Local Setup
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env
+# Edit .env before sourcing it.
+set -a
+source .env
+set +a
+```
+
+Set `DATABASE_URL` to a PostgreSQL database, then run:
+
+```bash
+alembic upgrade head
+uvicorn app.main:app --reload
+```
+
+Run tests with:
+
+```bash
+python3 -m unittest discover -s tests/unit -v
+```

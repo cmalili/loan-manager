@@ -41,6 +41,14 @@ class AuthServiceTests(unittest.TestCase):
         self.assertTrue(verify_password("secret-pass", password_hash))
         self.assertFalse(verify_password("wrong-pass", password_hash))
 
+    def test_verify_password_rejects_malformed_hash(self) -> None:
+        self.assertFalse(
+            verify_password(
+                "secret-pass",
+                "pbkdf2_sha256$not-an-int$bad-salt$bad-hash",
+            )
+        )
+
     def test_create_and_decode_access_token_round_trip(self) -> None:
         token = create_access_token(
             subject=str(self.user.id),

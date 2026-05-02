@@ -3,7 +3,7 @@
 This file tracks the current actionable tasks for the Loan Manager project.
 
 ## Current Focus
-Move from authentication and authorization into frontend and developer setup.
+Refine the first frontend screens, then use visual concepts for the main UI direction.
 
 ## Immediate Tasks
 - [x] Implement user authentication
@@ -13,11 +13,13 @@ Move from authentication and authorization into frontend and developer setup.
 - [x] Test auth and permissions flows
 
 ## Near-Term Tasks
-- [ ] Set up frontend application structure
-- [ ] Build borrower pages
-- [ ] Build loan pages
-- [ ] Build payment entry page
-- [ ] Build overdue loans page
+- [x] Frontend Phase 9A: set up application structure, routing, auth state, and API client
+- [ ] Generate visual concepts for the core internal tool screens
+- [ ] Frontend Phase 9B: complete borrower detail/edit/deactivation flows
+- [ ] Frontend Phase 9C: build loan detail and repayment schedule views
+- [ ] Frontend Phase 9D: browser-test payment entry and recent payment views
+- [ ] Frontend Phase 9E: browser-test overdue and dashboard reporting views
+- [ ] Frontend Phase 9F: integration polish, protected routes, and UI flow testing
 
 ## Project Hygiene
 - [x] Commit current database milestone
@@ -36,4 +38,5 @@ Move from authentication and authorization into frontend and developer setup.
 - Phase 6 overdue logic and late charges is now implemented and tested.
 - Phase 7 audit logging and reporting is now implemented and tested.
 - Phase 8 authentication and authorization is now implemented and tested.
-- The next major goal is Phase 9 frontend implementation.
+- Phase 9A frontend foundation is implemented.
+- The next major goal is visual concept work for the core screens before UI polish.

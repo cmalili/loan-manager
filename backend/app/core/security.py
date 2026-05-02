@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+import binascii
 import hashlib
 import hmac
 import json
@@ -51,9 +52,13 @@ def verify_password(password: str, password_hash: str) -> bool:
     if algorithm != "pbkdf2_sha256":
         return False
 
-    iterations = int(iterations_text)
-    salt = _b64url_decode(salt_text)
-    expected_hash = _b64url_decode(hash_text)
+    try:
+        iterations = int(iterations_text)
+        salt = _b64url_decode(salt_text)
+        expected_hash = _b64url_decode(hash_text)
+    except (ValueError, binascii.Error):
+        return False
+
     candidate_hash = hashlib.pbkdf2_hmac(
         "sha256",
         password.encode("utf-8"),

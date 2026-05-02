@@ -7,6 +7,8 @@ from decimal import Decimal
 from unittest.mock import MagicMock
 from uuid import uuid4
 
+from pydantic import ValidationError
+
 os.environ.setdefault("DATABASE_URL", "sqlite+pysqlite:///:memory:")
 
 from app.services.loan import (  # noqa: E402
@@ -68,6 +70,10 @@ class LoanServiceTests(unittest.TestCase):
     def test_get_periodic_interest_rate_uses_standard_v1_rates(self) -> None:
         self.assertEqual(get_periodic_interest_rate("weekly"), Decimal("8.00"))
         self.assertEqual(get_periodic_interest_rate("monthly"), Decimal("30.00"))
+
+    def test_loan_schema_rejects_more_than_two_decimal_places(self) -> None:
+        with self.assertRaises(ValidationError):
+            self.make_payload(principal_amount=Decimal("1000.001"))
 
     def test_create_loan_computes_end_date_and_standard_rate(self) -> None:
         loan = create_loan(self.db, self.make_payload(status="active"))

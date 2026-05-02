@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date, timedelta
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import Decimal
+from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
@@ -12,24 +13,14 @@ from sqlalchemy.orm import Session, selectinload
 from app.models.borrower import Borrower
 from app.models.loan import Loan
 from app.models.payment import Payment
-from app.models.repayment_schedule_item import RepaymentScheduleItem
-from app.services.borrower import BorrowerNotFoundError, get_borrower
+from app.services.borrower import get_borrower
+from app.services.money import ZERO, quantize_money
 from app.services.overdue import (
     late_charge_interest_outstanding,
     late_charge_principal_outstanding,
     process_overdue_loans,
     total_regular_outstanding,
 )
-
-
-TWOPLACES = Decimal("0.01")
-ZERO = Decimal("0.00")
-
-
-def quantize_money(value: Decimal) -> Decimal:
-    """Round values to two decimal places for report output."""
-
-    return value.quantize(TWOPLACES, rounding=ROUND_HALF_UP)
 
 
 @dataclass(slots=True)
@@ -66,13 +57,17 @@ def build_overdue_loan_summary(loan: Loan, *, as_of_date: date) -> OverdueLoanSu
     overdue_items = [item for item in loan.schedule_items if item.status == "overdue"]
     earliest_due_date = min(item.due_date for item in overdue_items)
     overdue_regular_balance = quantize_money(
-        sum(total_regular_outstanding(item) for item in overdue_items)
+        sum((total_regular_outstanding(item) for item in overdue_items), ZERO)
     )
     outstanding_late_charge_balance = quantize_money(
         sum(
-            late_charge_interest_outstanding(charge) + late_charge_principal_outstanding(charge)
-            for charge in loan.late_charges
-            if charge.status != "voided"
+            (
+                late_charge_interest_outstanding(charge)
+                + late_charge_principal_outstanding(charge)
+                for charge in loan.late_charges
+                if charge.status != "voided"
+            ),
+            ZERO,
         )
     )
     total_overdue_balance = quantize_money(
@@ -92,10 +87,19 @@ def build_overdue_loan_summary(loan: Loan, *, as_of_date: date) -> OverdueLoanSu
     )
 
 
-def list_overdue_loans(db: Session, *, as_of_date: date) -> list[OverdueLoanSummary]:
+def list_overdue_loans(
+    db: Session,
+    *,
+    as_of_date: date,
+    acting_user_id: UUID | None = None,
+) -> list[OverdueLoanSummary]:
     """Return overdue loans using the same source-of-truth delinquency logic."""
 
-    process_overdue_loans(db, as_of_date=as_of_date)
+    process_overdue_loans(
+        db,
+        as_of_date=as_of_date,
+        created_by_user_id=acting_user_id,
+    )
     statement = (
         select(Loan)
         .where(Loan.status == "overdue")
@@ -141,10 +145,15 @@ def get_dashboard_summary(
     *,
     as_of_date: date,
     recent_days: int = 7,
+    acting_user_id: UUID | None = None,
 ) -> dict[str, object]:
     """Return dashboard metrics derived from source-of-truth rows."""
 
-    overdue_rows = list_overdue_loans(db, as_of_date=as_of_date)
+    overdue_rows = list_overdue_loans(
+        db,
+        as_of_date=as_of_date,
+        acting_user_id=acting_user_id,
+    )
     statement = (
         select(Loan)
         .where(Loan.status.in_(("active", "closed", "overdue")))
@@ -165,10 +174,13 @@ def get_dashboard_summary(
         "overdue_loan_count": len(overdue_rows),
         "total_outstanding_balance": _calculate_total_outstanding_balance(loans),
         "total_overdue_balance": quantize_money(
-            sum(row.total_overdue_balance for row in overdue_rows) if overdue_rows else ZERO
+            sum(
+                (row.total_overdue_balance for row in overdue_rows),
+                ZERO,
+            )
         ),
         "recent_payment_count": len(recent_payments),
         "recent_payment_total": quantize_money(
-            sum(payment.amount for payment in recent_payments) if recent_payments else ZERO
+            sum((payment.amount for payment in recent_payments), ZERO)
         ),
     }

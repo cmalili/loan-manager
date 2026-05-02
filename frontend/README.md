@@ -1,15 +1,40 @@
 # Frontend
 
-Next.js frontend scaffold for the Internal Loan Management System.
+Next.js frontend for the internal Loan Manager system.
 
-## Intended Structure
+## Structure
 
-- `src/app/` for App Router pages, layouts, and route segments
-- `src/components/` for shared UI components
-- `src/features/` for feature-level modules
-- `src/lib/` for shared client utilities and helpers
-- `src/styles/` for global styles and design tokens
-- `public/` for static assets
-- `tests/` for frontend tests
+- `src/app/` contains App Router pages.
+- `src/components/` contains shared UI and auth shell components.
+- `src/lib/` contains API client, types, and formatting helpers.
+- `src/styles/` contains global application styling.
+- `public/` contains static assets.
+- `tests/` is reserved for frontend tests.
 
-No application logic has been added yet.
+## Local Setup
+
+```bash
+npm install
+cp .env.local.example .env.local
+```
+
+Set `NEXT_PUBLIC_API_BASE_URL` to the backend API base URL. For local backend
+defaults, use:
+
+```bash
+NEXT_PUBLIC_API_BASE_URL=http://localhost:8000/api/v1
+```
+
+Run the app:
+
+```bash
+npm run dev
+```
+
+Verify the app:
+
+```bash
+npm run lint
+npm run typecheck
+npm run build
+```

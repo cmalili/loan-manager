@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date, timedelta
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import Decimal
 from uuid import UUID
 
 from sqlalchemy import select
@@ -14,12 +14,10 @@ from app.models.late_charge import LateCharge
 from app.models.loan import Loan
 from app.models.repayment_schedule_item import RepaymentScheduleItem
 from app.services.audit import record_audit_log, snapshot_model
+from app.services.money import ONE_HUNDRED, ZERO, quantize_money
 from app.services.repayment_schedule import add_months
 
 
-ZERO = Decimal("0.00")
-ONE_HUNDRED = Decimal("100")
-TWOPLACES = Decimal("0.01")
 LATE_CHARGE_RATE = Decimal("10.00")
 
 
@@ -31,12 +29,6 @@ class OverdueProcessingResult:
     schedule_items_marked_overdue: int = 0
     late_charges_created: int = 0
     late_charges_accrued: int = 0
-
-
-def quantize_money(value: Decimal) -> Decimal:
-    """Round money values to two decimal places using the shared project rule."""
-
-    return value.quantize(TWOPLACES, rounding=ROUND_HALF_UP)
 
 
 def regular_interest_outstanding(item: RepaymentScheduleItem) -> Decimal:
@@ -113,7 +105,11 @@ def sync_schedule_item_status(
         grace_period_days=grace_period_days,
     ):
         item.status = "overdue"
-    elif item.principal_paid > ZERO or item.interest_paid > ZERO or item.waived_amount > ZERO:
+    elif (
+        item.principal_paid > ZERO
+        or item.interest_paid > ZERO
+        or item.waived_amount > ZERO
+    ):
         item.status = "partially_paid"
     else:
         item.status = "pending"
@@ -136,7 +132,11 @@ def sync_late_charge_status(charge: LateCharge) -> None:
             charge.status = "waived"
         else:
             charge.status = "paid"
-    elif charge.principal_paid > ZERO or charge.interest_paid > ZERO or charge.waived_amount > ZERO:
+    elif (
+        charge.principal_paid > ZERO
+        or charge.interest_paid > ZERO
+        or charge.waived_amount > ZERO
+    ):
         charge.status = "partially_paid"
     else:
         charge.status = "outstanding"
@@ -274,23 +274,29 @@ def sync_loan_status(
     """Update the loan status from current balances and delinquency state."""
 
     previous_status = loan.status
-    regular_outstanding = sum(total_regular_outstanding(item) for item in schedule_items)
+    regular_outstanding = sum(
+        (total_regular_outstanding(item) for item in schedule_items),
+        ZERO,
+    )
     late_charge_outstanding = sum(
-        late_charge_interest_outstanding(charge) + late_charge_principal_outstanding(charge)
-        for charge in late_charges
-        if charge.status != "voided"
+        (
+            late_charge_interest_outstanding(charge)
+            + late_charge_principal_outstanding(charge)
+            for charge in late_charges
+            if charge.status != "voided"
+        ),
+        ZERO,
     )
     total_outstanding = quantize_money(regular_outstanding + late_charge_outstanding)
 
     if total_outstanding == ZERO:
         loan.status = "closed"
-        return
-
-    has_overdue_item = any(item.status == "overdue" for item in schedule_items)
-    if has_overdue_item:
-        loan.status = "overdue"
-    elif loan.status in {"active", "overdue", "closed"}:
-        loan.status = "active"
+    else:
+        has_overdue_item = any(item.status == "overdue" for item in schedule_items)
+        if has_overdue_item:
+            loan.status = "overdue"
+        elif loan.status in {"active", "overdue", "closed"}:
+            loan.status = "active"
 
     if previous_status != loan.status:
         record_audit_log(
@@ -353,7 +359,17 @@ def process_loan_overdue_state(
 
     late_charges = list_late_charges_for_loan(db, loan.id)
     for charge in late_charges:
+        before_state = snapshot_model(charge)
         if accrue_late_charge_interest(charge, loan=loan, as_of_date=as_of_date):
+            record_audit_log(
+                db,
+                user_id=created_by_user_id,
+                entity_type="late_charge",
+                entity_id=charge.id,
+                action_type="interest_accrual",
+                before_state=before_state,
+                after_state=snapshot_model(charge),
+            )
             result.late_charges_accrued += 1
         sync_late_charge_status(charge)
 
@@ -384,7 +400,9 @@ def process_overdue_loans(
             created_by_user_id=created_by_user_id,
         )
         total_result.loans_processed += loan_result.loans_processed
-        total_result.schedule_items_marked_overdue += loan_result.schedule_items_marked_overdue
+        total_result.schedule_items_marked_overdue += (
+            loan_result.schedule_items_marked_overdue
+        )
         total_result.late_charges_created += loan_result.late_charges_created
         total_result.late_charges_accrued += loan_result.late_charges_accrued
 

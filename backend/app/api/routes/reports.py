@@ -33,7 +33,11 @@ def list_overdue_loans_endpoint(
 ) -> list[OverdueLoanRead]:
     """Return overdue loans derived from current delinquency state."""
 
-    return list_overdue_loans(db, as_of_date=as_of_date)
+    return list_overdue_loans(
+        db,
+        as_of_date=as_of_date,
+        acting_user_id=current_user.id,
+    )
 
 
 @router.get("/recent-payments", response_model=list[RecentPaymentRead])
@@ -55,4 +59,8 @@ def get_dashboard_summary_endpoint(
 ) -> DashboardSummaryRead:
     """Return top-level dashboard metrics."""
 
-    return get_dashboard_summary(db, as_of_date=as_of_date)
+    return get_dashboard_summary(
+        db,
+        as_of_date=as_of_date,
+        acting_user_id=current_user.id,
+    )

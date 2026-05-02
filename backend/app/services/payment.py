@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from collections.abc import Callable
+from datetime import date
 from decimal import Decimal
 
 from sqlalchemy import select
@@ -17,10 +18,8 @@ from app.models.repayment_schedule_item import RepaymentScheduleItem
 from app.models.user import User
 from app.schemas.payment import PaymentCreate
 from app.services.audit import record_audit_log, snapshot_model
+from app.services.money import ZERO, quantize_money
 from app.services.overdue import process_loan_overdue_state
-
-
-ZERO = Decimal("0.00")
 
 
 class PaymentValidationError(ValueError):
@@ -44,7 +43,7 @@ class BackdatedPaymentNotAllowedError(ValueError):
 
 
 def _money(value: Decimal) -> Decimal:
-    return value.quantize(Decimal("0.01"))
+    return quantize_money(value)
 
 
 def list_schedule_items_for_loan(db: Session, loan_id) -> list[RepaymentScheduleItem]:
@@ -75,10 +74,15 @@ def late_charge_interest_outstanding(charge: LateCharge) -> Decimal:
 
 
 def late_charge_principal_outstanding(charge: LateCharge) -> Decimal:
-    return _money(charge.charge_principal_amount - charge.principal_paid - charge.waived_amount)
+    return _money(
+        charge.charge_principal_amount - charge.principal_paid - charge.waived_amount
+    )
 
 
-def total_outstanding_balance(schedule_items: list[RepaymentScheduleItem], late_charges: list[LateCharge]) -> Decimal:
+def total_outstanding_balance(
+    schedule_items: list[RepaymentScheduleItem],
+    late_charges: list[LateCharge],
+) -> Decimal:
     total = ZERO
     for charge in late_charges:
         total += late_charge_interest_outstanding(charge)
@@ -89,10 +93,14 @@ def total_outstanding_balance(schedule_items: list[RepaymentScheduleItem], late_
     return _money(total)
 
 
-def apply_payment_to_late_charges(
+def _apply_to_late_charge_component(
     payment: Payment,
     late_charges: list[LateCharge],
     amount_remaining: Decimal,
+    *,
+    allocation_type: str,
+    paid_field: str,
+    outstanding_calculator: Callable[[LateCharge], Decimal],
 ) -> tuple[list[PaymentAllocation], Decimal]:
     allocations: list[PaymentAllocation] = []
 
@@ -100,42 +108,128 @@ def apply_payment_to_late_charges(
         if amount_remaining <= ZERO:
             break
 
-        interest_outstanding = late_charge_interest_outstanding(charge)
-        if interest_outstanding > ZERO and amount_remaining > ZERO:
-            amount_to_apply = min(amount_remaining, interest_outstanding)
-            charge.interest_paid = _money(charge.interest_paid + amount_to_apply)
-            allocations.append(
-                PaymentAllocation(
-                    payment_id=payment.id,
-                    loan_id=payment.loan_id,
-                    late_charge_id=charge.id,
-                    allocation_type="late_charge_interest",
-                    amount=amount_to_apply,
-                )
-            )
-            amount_remaining = _money(amount_remaining - amount_to_apply)
+        outstanding = outstanding_calculator(charge)
+        if outstanding <= ZERO:
+            continue
 
-        principal_outstanding = late_charge_principal_outstanding(charge)
-        if principal_outstanding > ZERO and amount_remaining > ZERO:
-            amount_to_apply = min(amount_remaining, principal_outstanding)
-            charge.principal_paid = _money(charge.principal_paid + amount_to_apply)
-            allocations.append(
-                PaymentAllocation(
-                    payment_id=payment.id,
-                    loan_id=payment.loan_id,
-                    late_charge_id=charge.id,
-                    allocation_type="late_charge_principal",
-                    amount=amount_to_apply,
-                )
+        amount_to_apply = min(amount_remaining, outstanding)
+        setattr(
+            charge,
+            paid_field,
+            _money(getattr(charge, paid_field) + amount_to_apply),
+        )
+        allocations.append(
+            PaymentAllocation(
+                payment_id=payment.id,
+                loan_id=payment.loan_id,
+                late_charge_id=charge.id,
+                allocation_type=allocation_type,
+                amount=amount_to_apply,
             )
-            amount_remaining = _money(amount_remaining - amount_to_apply)
-
-        if late_charge_interest_outstanding(charge) == ZERO and late_charge_principal_outstanding(charge) == ZERO:
-            charge.status = "paid"
-        elif charge.interest_paid > ZERO or charge.principal_paid > ZERO:
-            charge.status = "partially_paid"
+        )
+        amount_remaining = _money(amount_remaining - amount_to_apply)
 
     return allocations, amount_remaining
+
+
+def _sync_late_charge_status_after_payment(charge: LateCharge) -> None:
+    if (
+        late_charge_interest_outstanding(charge) == ZERO
+        and late_charge_principal_outstanding(charge) == ZERO
+    ):
+        charge.status = "paid"
+    elif (
+        charge.interest_paid > ZERO
+        or charge.principal_paid > ZERO
+        or charge.waived_amount > ZERO
+    ):
+        charge.status = "partially_paid"
+
+
+def apply_payment_to_late_charges(
+    payment: Payment,
+    late_charges: list[LateCharge],
+    amount_remaining: Decimal,
+) -> tuple[list[PaymentAllocation], Decimal]:
+    allocations: list[PaymentAllocation] = []
+
+    interest_allocations, amount_remaining = _apply_to_late_charge_component(
+        payment,
+        late_charges,
+        amount_remaining,
+        allocation_type="late_charge_interest",
+        paid_field="interest_paid",
+        outstanding_calculator=late_charge_interest_outstanding,
+    )
+    allocations.extend(interest_allocations)
+
+    principal_allocations, amount_remaining = _apply_to_late_charge_component(
+        payment,
+        late_charges,
+        amount_remaining,
+        allocation_type="late_charge_principal",
+        paid_field="principal_paid",
+        outstanding_calculator=late_charge_principal_outstanding,
+    )
+    allocations.extend(principal_allocations)
+
+    for charge in late_charges:
+        _sync_late_charge_status_after_payment(charge)
+
+    return allocations, amount_remaining
+
+
+def _apply_to_schedule_item_component(
+    payment: Payment,
+    schedule_items: list[RepaymentScheduleItem],
+    amount_remaining: Decimal,
+    *,
+    allocation_type: str,
+    paid_field: str,
+    outstanding_calculator: Callable[[RepaymentScheduleItem], Decimal],
+) -> tuple[list[PaymentAllocation], Decimal]:
+    allocations: list[PaymentAllocation] = []
+
+    for item in schedule_items:
+        if amount_remaining <= ZERO:
+            break
+
+        outstanding = outstanding_calculator(item)
+        if outstanding <= ZERO:
+            continue
+
+        amount_to_apply = min(amount_remaining, outstanding)
+        setattr(
+            item,
+            paid_field,
+            _money(getattr(item, paid_field) + amount_to_apply),
+        )
+        allocations.append(
+            PaymentAllocation(
+                payment_id=payment.id,
+                loan_id=payment.loan_id,
+                schedule_item_id=item.id,
+                allocation_type=allocation_type,
+                amount=amount_to_apply,
+            )
+        )
+        amount_remaining = _money(amount_remaining - amount_to_apply)
+
+    return allocations, amount_remaining
+
+
+def _sync_schedule_item_status_after_payment(item: RepaymentScheduleItem) -> None:
+    if (
+        schedule_item_regular_interest_outstanding(item) == ZERO
+        and schedule_item_regular_principal_outstanding(item) == ZERO
+    ):
+        item.status = "paid"
+    elif (
+        item.interest_paid > ZERO
+        or item.principal_paid > ZERO
+        or item.waived_amount > ZERO
+    ):
+        item.status = "partially_paid"
 
 
 def apply_payment_to_schedule_items(
@@ -145,44 +239,28 @@ def apply_payment_to_schedule_items(
 ) -> tuple[list[PaymentAllocation], Decimal]:
     allocations: list[PaymentAllocation] = []
 
+    interest_allocations, amount_remaining = _apply_to_schedule_item_component(
+        payment,
+        schedule_items,
+        amount_remaining,
+        allocation_type="regular_interest",
+        paid_field="interest_paid",
+        outstanding_calculator=schedule_item_regular_interest_outstanding,
+    )
+    allocations.extend(interest_allocations)
+
+    principal_allocations, amount_remaining = _apply_to_schedule_item_component(
+        payment,
+        schedule_items,
+        amount_remaining,
+        allocation_type="regular_principal",
+        paid_field="principal_paid",
+        outstanding_calculator=schedule_item_regular_principal_outstanding,
+    )
+    allocations.extend(principal_allocations)
+
     for item in schedule_items:
-        if amount_remaining <= ZERO:
-            break
-
-        interest_outstanding = schedule_item_regular_interest_outstanding(item)
-        if interest_outstanding > ZERO and amount_remaining > ZERO:
-            amount_to_apply = min(amount_remaining, interest_outstanding)
-            item.interest_paid = _money(item.interest_paid + amount_to_apply)
-            allocations.append(
-                PaymentAllocation(
-                    payment_id=payment.id,
-                    loan_id=payment.loan_id,
-                    schedule_item_id=item.id,
-                    allocation_type="regular_interest",
-                    amount=amount_to_apply,
-                )
-            )
-            amount_remaining = _money(amount_remaining - amount_to_apply)
-
-        principal_outstanding = schedule_item_regular_principal_outstanding(item)
-        if principal_outstanding > ZERO and amount_remaining > ZERO:
-            amount_to_apply = min(amount_remaining, principal_outstanding)
-            item.principal_paid = _money(item.principal_paid + amount_to_apply)
-            allocations.append(
-                PaymentAllocation(
-                    payment_id=payment.id,
-                    loan_id=payment.loan_id,
-                    schedule_item_id=item.id,
-                    allocation_type="regular_principal",
-                    amount=amount_to_apply,
-                )
-            )
-            amount_remaining = _money(amount_remaining - amount_to_apply)
-
-        if schedule_item_regular_interest_outstanding(item) == ZERO and schedule_item_regular_principal_outstanding(item) == ZERO:
-            item.status = "paid"
-        elif item.interest_paid > ZERO or item.principal_paid > ZERO:
-            item.status = "partially_paid"
+        _sync_schedule_item_status_after_payment(item)
 
     return allocations, amount_remaining
 
@@ -194,6 +272,9 @@ def record_payment(db: Session, payment_in: PaymentCreate) -> Payment:
     if loan is None:
         raise PaymentLoanNotFoundError(f"Loan {payment_in.loan_id} was not found")
 
+    if loan.status == "cancelled":
+        raise PaymentValidationError("Cancelled loans do not accept payments")
+
     borrower = db.get(Borrower, payment_in.borrower_id)
     if borrower is None:
         raise PaymentBorrowerNotFoundError(f"Borrower {payment_in.borrower_id} was not found")
@@ -202,7 +283,8 @@ def record_payment(db: Session, payment_in: PaymentCreate) -> Payment:
     if recorder is None:
         raise PaymentRecorderNotFoundError(f"User {payment_in.recorded_by_user_id} was not found")
 
-    if payment_in.payment_date < datetime.now().date() and recorder.role != "admin":
+    today = date.today()
+    if payment_in.payment_date < today and recorder.role != "admin":
         raise BackdatedPaymentNotAllowedError(
             "Only admin users may record backdated payments"
         )
@@ -235,7 +317,7 @@ def record_payment(db: Session, payment_in: PaymentCreate) -> Payment:
         payment_method=payment_in.payment_method,
         reference_code=payment_in.reference_code,
         notes=payment_in.notes,
-        is_backdated=payment_in.payment_date < datetime.now().date(),
+        is_backdated=payment_in.payment_date < today,
         status="recorded",
     )
 

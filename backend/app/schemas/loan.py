@@ -28,7 +28,7 @@ class LoanCreate(BaseModel):
 
     borrower_id: UUID
     created_by_user_id: UUID
-    principal_amount: Decimal = Field(gt=0)
+    principal_amount: Decimal = Field(gt=0, max_digits=12, decimal_places=2)
     repayment_frequency: RepaymentFrequency
     term_length: int = Field(gt=0)
     start_date: date

@@ -137,6 +137,8 @@ class OverdueServiceTests(unittest.TestCase):
         self.assertEqual(charge.interest_periods_accrued, 2)
         self.assertEqual(result.late_charges_accrued, 1)
         self.assertEqual(charge.status, "outstanding")
+        audit_logs = [call.args[0] for call in self.db.add.call_args_list]
+        self.assertIn("interest_accrual", [log.action_type for log in audit_logs])
 
     def test_process_loan_cures_overdue_status_when_overdue_items_are_fully_settled(self) -> None:
         loan = self.make_loan(status="overdue")
@@ -168,6 +170,36 @@ class OverdueServiceTests(unittest.TestCase):
         self.assertEqual(paid_item.status, "paid")
         self.assertEqual(future_item.status, "pending")
         self.assertEqual(loan.status, "active")
+
+    def test_process_loan_records_status_change_audit_when_closing_loan(self) -> None:
+        loan = self.make_loan(status="active")
+        paid_item = self.make_schedule_item(
+            principal_paid=Decimal("100.00"),
+            interest_paid=Decimal("20.00"),
+            status="pending",
+        )
+
+        with patch(
+            "app.services.overdue.list_schedule_items_for_loan",
+            return_value=[paid_item],
+        ), patch(
+            "app.services.overdue.list_late_charges_for_loan",
+            return_value=[],
+        ):
+            process_loan_overdue_state(
+                self.db,
+                loan,
+                as_of_date=date(2026, 4, 10),
+                created_by_user_id=self.user_id,
+            )
+
+        self.assertEqual(paid_item.status, "paid")
+        self.assertEqual(loan.status, "closed")
+        audit_log = self.db.add.call_args.args[0]
+        self.assertEqual(audit_log.entity_type, "loan")
+        self.assertEqual(audit_log.entity_id, loan.id)
+        self.assertEqual(audit_log.action_type, "status_change")
+        self.assertEqual(audit_log.user_id, self.user_id)
 
 
 if __name__ == "__main__":

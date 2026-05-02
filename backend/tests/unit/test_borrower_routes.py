@@ -76,7 +76,11 @@ class BorrowerRouteTests(unittest.TestCase):
             result = create_borrower_endpoint(borrower_in, self.fake_db, self.current_user)
 
         self.assertEqual(result["full_name"], "Jane Doe")
-        mock_create_borrower.assert_called_once_with(self.fake_db, borrower_in)
+        mock_create_borrower.assert_called_once_with(
+            self.fake_db,
+            borrower_in,
+            acting_user_id=self.current_user.id,
+        )
 
     def test_list_borrower_loans_returns_history(self) -> None:
         loan_payload = [
@@ -141,7 +145,10 @@ class BorrowerRouteTests(unittest.TestCase):
 
         self.assertEqual(result["phone_number"], "555-9999")
         mock_update_borrower.assert_called_once_with(
-            self.fake_db, self.borrower_id, borrower_in
+            self.fake_db,
+            self.borrower_id,
+            borrower_in,
+            acting_user_id=self.current_user.id,
         )
 
     def test_update_borrower_returns_404_when_missing(self) -> None:
@@ -172,7 +179,11 @@ class BorrowerRouteTests(unittest.TestCase):
             )
 
         self.assertEqual(result["status"], "inactive")
-        mock_deactivate_borrower.assert_called_once_with(self.fake_db, self.borrower_id)
+        mock_deactivate_borrower.assert_called_once_with(
+            self.fake_db,
+            self.borrower_id,
+            acting_user_id=self.current_user.id,
+        )
 
     def test_deactivate_borrower_returns_404_when_missing(self) -> None:
         with patch(

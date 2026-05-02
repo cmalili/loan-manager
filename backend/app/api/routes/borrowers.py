@@ -81,7 +81,7 @@ def create_borrower_endpoint(
 ) -> BorrowerRead:
     """Create a borrower."""
 
-    return create_borrower(db, borrower_in)
+    return create_borrower(db, borrower_in, acting_user_id=current_user.id)
 
 
 @router.patch("/{borrower_id}", response_model=BorrowerRead)
@@ -94,7 +94,12 @@ def update_borrower_endpoint(
     """Partially update a borrower."""
 
     try:
-        return update_borrower(db, borrower_id, borrower_in)
+        return update_borrower(
+            db,
+            borrower_id,
+            borrower_in,
+            acting_user_id=current_user.id,
+        )
     except BorrowerNotFoundError as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -111,7 +116,7 @@ def deactivate_borrower_endpoint(
     """Deactivate a borrower while preserving history."""
 
     try:
-        return deactivate_borrower(db, borrower_id)
+        return deactivate_borrower(db, borrower_id, acting_user_id=current_user.id)
     except BorrowerNotFoundError as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

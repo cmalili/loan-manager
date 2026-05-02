@@ -28,6 +28,7 @@ class ReportingServiceTests(unittest.TestCase):
     def setUp(self) -> None:
         self.borrower_id = uuid4()
         self.loan_id = uuid4()
+        self.user_id = uuid4()
         self.db = MagicMock()
 
     def make_loan(self, **overrides) -> Loan:
@@ -157,11 +158,19 @@ class ReportingServiceTests(unittest.TestCase):
         self.db.scalars.return_value = scalars_result
 
         with patch("app.services.reporting.process_overdue_loans") as mock_process:
-            result = list_overdue_loans(self.db, as_of_date=date(2026, 4, 15))
+            result = list_overdue_loans(
+                self.db,
+                as_of_date=date(2026, 4, 15),
+                acting_user_id=self.user_id,
+            )
 
         self.assertEqual(len(result), 1)
         self.assertEqual(result[0].loan_id, loan.id)
-        mock_process.assert_called_once_with(self.db, as_of_date=date(2026, 4, 15))
+        mock_process.assert_called_once_with(
+            self.db,
+            as_of_date=date(2026, 4, 15),
+            created_by_user_id=self.user_id,
+        )
 
     def test_list_recent_payments_returns_recorded_payments(self) -> None:
         payments = [self.make_payment()]
@@ -204,8 +213,12 @@ class ReportingServiceTests(unittest.TestCase):
         with patch(
             "app.services.reporting.list_overdue_loans",
             return_value=overdue_rows,
-        ):
-            summary = get_dashboard_summary(self.db, as_of_date=date(2026, 4, 15))
+        ) as mock_overdue:
+            summary = get_dashboard_summary(
+                self.db,
+                as_of_date=date(2026, 4, 15),
+                acting_user_id=self.user_id,
+            )
 
         self.assertEqual(summary["active_loan_count"], 1)
         self.assertEqual(summary["closed_loan_count"], 1)
@@ -214,6 +227,11 @@ class ReportingServiceTests(unittest.TestCase):
         self.assertEqual(summary["total_overdue_balance"], Decimal("130.75"))
         self.assertEqual(summary["recent_payment_count"], 2)
         self.assertEqual(summary["recent_payment_total"], Decimal("125.00"))
+        mock_overdue.assert_called_once_with(
+            self.db,
+            as_of_date=date(2026, 4, 15),
+            acting_user_id=self.user_id,
+        )
 
 
 if __name__ == "__main__":
